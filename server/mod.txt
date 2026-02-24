@@ -1,0 +1,11 @@
+npm init
+npm i
+
+node modules------
+dotenv
+express
+cors
+mongoose
+nodemon
+jsonwebtoken
+bcryptjs
