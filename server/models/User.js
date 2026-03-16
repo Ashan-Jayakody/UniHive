@@ -43,6 +43,9 @@ const userSchema = new mongoose.Schema({
         enum: [1,2,3,4],
         required: true
     },
+    expertSkills: [{
+        type: String
+    }],
     reputationPoints: {
         type: Number,
         default: 0

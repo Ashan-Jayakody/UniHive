@@ -9,3 +9,4 @@ mongoose
 nodemon
 jsonwebtoken
 bcryptjs
+socket.io

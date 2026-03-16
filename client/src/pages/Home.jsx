@@ -31,6 +31,13 @@ const Home = () => {
           >
             Register
           </Link>
+
+          <Link 
+            to="/request"
+            className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 w-full sm:w-auto text-center"
+          >
+            request
+          </Link>
           
         </div>
       </div>

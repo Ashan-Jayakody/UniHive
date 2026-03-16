@@ -3,18 +3,20 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import RequestHelp from './components/RequestHelp';
 
 function App() {
   return (
     <div>
       {/* Route Definitions */}
       <Routes>
-        {/* The new Home page is now the default route */}
+      
         <Route path="/" element={<Home />} />
         
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path='/request' element={<RequestHelp/>}/>
       </Routes>
     </div>
   );
