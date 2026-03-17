@@ -1,71 +1,90 @@
 const mongoose = require('mongoose');
-const faculties = require('../config/faculties');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
+      trim: true,
     },
     email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true 
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
     },
     password: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     role: {
-        type: String,
-        enum: ['student', 'faculty', 'admin'], // Restricts to these exact roles
-        default: 'student'
+      type: String,
+      enum: ['student', 'faculty', 'admin'],
+      default: 'student',
     },
     faculty: {
-        type: String,
-        required: true,
-        enum: Object.keys(faculties)
+      type: String,
+      default: '',
     },
     course: {
-        type: String,
-        required: true,
-        validate: {
-            validator: function (value) {
-                return faculties[this.faculty]?.includes(value);
-            },
-            message: 'Invalid course for selected faculty'
-        }
+      type: String,
+      default: '',
     },
     academicYear: {
-        type: Number,
-        enum: [1,2,3,4],
-        required: true
+      type: Number,
+      default: null,
     },
-    reputationPoints: {
-        type: Number,
-        default: 0
+    status: {
+      type: String,
+      enum: ['active', 'deactivated', 'suspended', 'banned'],
+      default: 'active',
     },
-    bookmarkedResources: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Resource'
-    }]
-}, { timestamps: true }); 
+    points: {
+      type: Number,
+      default: 0,
+    },
+    helperBadge: {
+      type: Boolean,
+      default: false,
+    },
+    profilePhoto: {
+      type: String,
+      default: '',
+    },
+    phone: {
+      type: String,
+      default: '',
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    loginHistory: [
+      {
+        loginAt: { type: Date, default: Date.now },
+        device: { type: String, default: 'Unknown device' },
+        ipAddress: { type: String, default: '' },
+      },
+    ],
+  },
+  { timestamps: true }
+);
 
-// Hash password before saving
-userSchema.pre('save', async function() {
-    if (!this.isModified('password')) {
-        return;
-    }
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-//compare passwords
 userSchema.methods.comparePassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);
