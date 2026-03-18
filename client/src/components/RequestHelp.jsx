@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ExpertMatch from "./ExpertMatch";
 
 const RequestHelp = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const RequestHelp = () => {
 
   const [attachment, setAttachment] = useState(null);
 
+  const [newRequestId, setNewRequestId] = useState(null);
   const [matchedHelpers, setMatchedHelpers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +56,7 @@ const handleSubmit = async (e) => {
 
     console.log("Successfully Created Request:", data.helpRequest);
     setMatchedHelpers(data.helpers);
+    setNewRequestId(data.helpRequest._id);
     setShowModal(true); //opens expert matching modal
   } catch (err) {
     setError(err.message);
@@ -147,13 +150,15 @@ return (
     </form>
 
     {/* Placeholder for the Modal */}
-            {showModal && (
-                <div className="mt-8 p-4 border-2 border-green-500 rounded">
-                    <h3 className="font-bold text-lg text-green-600">Request Created!</h3>
-                    <p>We found {matchedHelpers.length} experts who can help.</p>
-                    {/* We will build the actual modal UI next! */}
-                </div>
-            )}
+    <ExpertMatch
+      isOpen={showModal}
+      helpers={matchedHelpers}
+      requestId={newRequestId}
+      onClose={() => {
+        setShowModal(false);
+        //add here to redirect to the dashboard or etc
+      }}
+    />
 
   </div>
 );
