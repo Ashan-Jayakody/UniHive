@@ -283,6 +283,21 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           )}
 
           {currentUser && (
+            <Link to="/requests" className={glassPrimary}>
+              <span className="text-lg">💬</span>
+              <span>Request</span>
+            </Link>
+          )}
+
+            {currentUser && (
+            <Link to="/helpboard" className={glassPrimary}>
+              <span className="text-lg">💬</span>
+              <span>Help Board</span>
+            </Link>
+          )}
+
+
+          {currentUser && (
             <div className="relative z-[200]" ref={dropdownRef}>
               <button
                 type="button"

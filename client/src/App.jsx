@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import RequestHelp from './components/RequestHelp';
+import HelpBoard from './pages/HealpBoard';
 import UserManagement from './pages/UserManagement';
 import AcademicCommunication from './pages/AcademicCommunication';
 import AccessDenied from './pages/AccessDenied';
@@ -54,6 +55,25 @@ function App() {
           element={
             <ProtectedRoute>
               <AcademicCommunication />
+            </ProtectedRoute>
+          }
+        />
+
+
+        <Route
+          path="/requests"
+          element={
+            <ProtectedRoute>
+              <RequestHelp />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/helpboard"
+          element={
+            <ProtectedRoute>
+              <HelpBoard />
             </ProtectedRoute>
           }
         />

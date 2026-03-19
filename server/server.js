@@ -5,7 +5,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
-const { initSocket } = require('./socket');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,9 +17,8 @@ const io = new Server(server, {
     }
 });
 
-initSocket(io);
 
-io.on('connection', (Socket) => {
+io.on('connection', (socket) => {
     console.log(`User connected via Socket: ${socket.id}`);
 
     // User Room
@@ -31,12 +29,12 @@ io.on('connection', (Socket) => {
 
     //Help Request Room
     socket.on('join_request_room', (requestId) => {
-        socket.join(requestId);
+        socket.join(`help:${requestId}`);
         console.log(`User ${socket.id} joined help request room: ${requestId}`);
     });
 
     socket.on('send_message', (data) => {
-        socket.to(data.requestId).emit('receive_message', data);
+        socket.to(`help:${data.requestId}`).emit('receive_message', data);
     });
 
     socket.on('disconnect', () => {

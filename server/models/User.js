@@ -8,57 +8,6 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Name is required'],
       trim: true,
     },
-<<<<<<< HEAD
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true 
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    role: {
-        type: String,
-        enum: ['student', 'faculty', 'admin'], // Restricts to these exact roles
-        default: 'student'
-    },
-    faculty: {
-        type: String,
-        required: true,
-        enum: Object.keys(faculties)
-    },
-    course: {
-        type: String,
-        required: true,
-        validate: {
-            validator: function (value) {
-                return faculties[this.faculty]?.includes(value);
-            },
-            message: 'Invalid course for selected faculty'
-        }
-    },
-    academicYear: {
-        type: Number,
-        enum: [1,2,3,4],
-        required: true
-    },
-    expertSkills: [{
-        type: String
-    }],
-    reputationPoints: {
-        type: Number,
-        default: 0
-    },
-    bookmarkedResources: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Resource'
-    }]
-}, { timestamps: true }); 
-=======
->>>>>>> 0a87fa93a85c9be78a169cb64caa4eb496f10bd8
 
     email: {
       type: String,
@@ -98,6 +47,12 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    expertiseAreas: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     status: {
       type: String,
       enum: ['active', 'deactivated', 'suspended', 'banned'],

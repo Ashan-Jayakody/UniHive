@@ -31,6 +31,13 @@ const handleSubmit = async (e) => {
   const token = localStorage.getItem("token");
 
   const submitData = new FormData();
+
+  //to lowercase and trim tags before sending to backend
+   const formattedTags = formData.tags
+    .split(',')
+    .map(tag => tag.trim().toLowerCase())
+    .filter(tag => tag !== '');
+    
   submitData.append("topic", formData.topic);
   submitData.append("description", formData.description);
   submitData.append("urgencyLevel", formData.urgencyLevel);

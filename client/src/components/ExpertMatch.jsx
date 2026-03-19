@@ -11,7 +11,7 @@ const ExpertMatch = ({isOpen, helpers, requestId, onClose}) => {
         if(selectedExperts.includes(helperId)) {
             setSelectedExperts(selectedExperts.filter(id => id!== helperId));
         }else{
-            setSelectedExperts([...selectedExperts. helperId]);
+            setSelectedExperts([...selectedExperts, helperId]);
         }
     };
 
@@ -26,7 +26,7 @@ const ExpertMatch = ({isOpen, helpers, requestId, onClose}) => {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorozation': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({expertIds: selectedExperts})
             });
@@ -77,7 +77,7 @@ return (
                             <div className="flex justify-between items-center">
                                 <div>
                                     <h4 className="font-bold text-lg">{helper.name}</h4>
-                                    <p className="text-sm text-gray-500">Skills: {helper.expertSkills.join(', ')}</p>
+                                    <p className="text-sm text-gray-500">Skills: {(helper.expertiseAreas || []).join(', ')}</p>
                                 </div>
                                 <div className="text-right">
                                     <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded">

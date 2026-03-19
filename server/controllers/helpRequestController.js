@@ -11,7 +11,10 @@ const createHelpRequest = async (req, res) => {
             attachmentUrl = "https://cloud-storage.com/dummy-url.png"; 
         }
 
-        const parsedTags = typeof tags == 'string' ? tags.split(',').map(tag => tag.trim()) :tags;
+        const parsedTags =
+  typeof tags === 'string'
+    ? tags.split(',').map(tag => tag.trim().toLowerCase())
+    : tags.map(tag => tag.toLowerCase());
 
         const newRequest = await HelpRequest.create({
             requester: req.user._id,
@@ -24,9 +27,9 @@ const createHelpRequest = async (req, res) => {
         });
 
         const suggestedHelpers = await User.find({
-            _id: {$ne: requesterId},
-            expertSkills: {$in: parsedTags}
-        }).sort({rating:-1}).limit(3).select('name skills rating');
+            _id: {$ne: req.user._id},
+            expertiseAreas: {$in: parsedTags}
+        }).sort({rating:-1}).limit(3).select('name expertiseAreas rating');
 
         res.status(201).json({
             success: true,
@@ -199,11 +202,45 @@ const resolveHelpRequest = async(req, res) => {
     }
 };
 
+
+//get open requests for the public board
+// GET/api/request
+const getOpenRequests = async(req, res) => {
+    try {
+        const requests = await HelpRequest.find({status: 'Open'})
+            .populate('requester', 'name profilePicture')
+            .sort({createdAt: -1})
+        
+        res.status(200).json({success: true, requests });
+    } catch (error) {
+        console.error("Get open requests error:", error);
+        res.status(500).json({ error: "Failed to fetch open requests", details: error.message });
+    }
+}
+
+// get open requests where the user was specifically invited
+// GET/api/request/invitations
+const getMyInvitations = async(req, res) => {
+    try {
+        const invitations = await HelpRequest.find({
+            status: 'Open',
+            askedExperts: req.user._id  //looks their id in the array
+        }).populate('requester', 'name')
+        .sort({createdAt: -1});
+
+        res.status(200).json({success: true, invitations});
+    }catch (error) {
+        console.error("Get invitations error:", error);
+        res.status(500).json({ error: "Failed to fetch invitations", details: error.message });
+    }
+};
+
 // delete a help request
 // DELETE/api/request/:id
 
     
 
 module.exports = {
-    createHelpRequest,inviteExperts,acceptHelpRequest,addMessage, resolveHelpRequest
+    createHelpRequest,inviteExperts,acceptHelpRequest,addMessage, 
+    resolveHelpRequest, getOpenRequests, getMyInvitations
 };

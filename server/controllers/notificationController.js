@@ -1,5 +1,4 @@
 const Notification = require('../models/Notification');
-const { getIO } = require('../socket');
 
 // GET ALL NOTIFICATIONS FOR LOGGED-IN USER
 const getNotifications = async (req, res) => {
