@@ -235,6 +235,22 @@ const getMyInvitations = async(req, res) => {
     }
 };
 
+
+// get all help requests created by the user
+// GET/api/request/myrequests
+const getMyRequests = async(req, res) => {
+    try{
+        const myRequests = await HelpRequest.find({requester: req.user._id})
+        .populate('acceptedHelper', 'name email')
+        .sort({createdAt: -1});
+
+        res.status(200).json({success: true, myRequests});
+    }catch (error) {
+        console.error("Get my requests error:", error);
+        res.status(500).json({error: "Failed to fetch your requests"});
+    }
+};
+
 // delete a help request
 // DELETE/api/request/:id
 
@@ -242,5 +258,5 @@ const getMyInvitations = async(req, res) => {
 
 module.exports = {
     createHelpRequest,inviteExperts,acceptHelpRequest,addMessage, 
-    resolveHelpRequest, getOpenRequests, getMyInvitations
+    resolveHelpRequest, getOpenRequests, getMyInvitations, getMyRequests
 };
