@@ -1,6 +1,11 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { socket } from '../socket';
+import {
+  Home, LayoutGrid, User, Folder,
+  GraduationCap, LifeBuoy, BarChart2,
+  Wrench, Bell, LogOut, MessageSquare
+} from 'lucide-react';
 
 const NOTIFICATION_API = 'http://localhost:5000/api/notifications';
 
@@ -33,24 +38,25 @@ const formatRole = (role) => {
   return role || '-';
 };
 
-const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const currentUser = getCurrentUser();
-  const isAdmin = currentUser?.role === 'admin';
 
-  const [notifications, setNotifications] = useState([]);
+const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) => {
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const currentUser = getCurrentUser();
+  const isAdmin    = currentUser?.role === 'admin';
+
+
+  const [notifications,        setNotifications]        = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownOpen,         setDropdownOpen]         = useState(false);
 
   const dropdownRef = useRef(null);
 
+ 
   const fetchNotifications = async () => {
     try {
       if (!currentUser) return;
-
       setLoadingNotifications(true);
-
       const token = localStorage.getItem('token');
       if (!token) return;
 
@@ -60,10 +66,8 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           Authorization: `Bearer ${token}`,
         },
       });
-
       const data = await response.json();
       if (!response.ok) return;
-
       setNotifications(Array.isArray(data) ? data : []);
     } catch {
       // silent
@@ -72,6 +76,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     }
   };
 
+ 
   useEffect(() => {
     if (currentUser?._id) {
       socket.emit('join-user-room', currentUser._id);
@@ -79,13 +84,13 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     }
   }, [currentUser?._id, location.pathname]);
 
+  // Socket event listeners 
   useEffect(() => {
     if (!currentUser?._id) return;
 
     const onNew = (notification) => {
       setNotifications((prev) => [notification, ...prev]);
     };
-
     const onUpdated = (payload) => {
       setNotifications((prev) =>
         prev.map((item) =>
@@ -93,48 +98,46 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         )
       );
     };
-
     const onAllRead = () => {
       setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
     };
-
     const onDeleted = (payload) => {
       setNotifications((prev) => prev.filter((item) => item._id !== payload._id));
     };
 
-    socket.on('notification:new', onNew);
+    socket.on('notification:new',     onNew);
     socket.on('notification:updated', onUpdated);
     socket.on('notification:all-read', onAllRead);
     socket.on('notification:deleted', onDeleted);
 
     return () => {
-      socket.off('notification:new', onNew);
+      socket.off('notification:new',     onNew);
       socket.off('notification:updated', onUpdated);
       socket.off('notification:all-read', onAllRead);
       socket.off('notification:deleted', onDeleted);
     };
   }, [currentUser?._id]);
 
+  // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const unreadCount = useMemo(() => {
-    return notifications.filter((item) => !item.read).length;
-  }, [notifications]);
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications]
+  );
+  const latestNotifications = useMemo(
+    () => notifications.slice(0, 5),
+    [notifications]
+  );
 
-  const latestNotifications = useMemo(() => {
-    return notifications.slice(0, 5);
-  }, [notifications]);
 
   const formatDate = (value) => {
     if (!value) return '-';
@@ -143,49 +146,47 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     return date.toLocaleString();
   };
 
+
   const getTypeBadge = (type) => {
     if (type === 'success') return 'bg-green-100/70 text-green-700 border border-green-200/70';
     if (type === 'warning') return 'bg-yellow-100/70 text-yellow-700 border border-yellow-200/70';
-    if (type === 'error') return 'bg-red-100/70 text-red-700 border border-red-200/70';
+    if (type === 'error')   return 'bg-red-100/70 text-red-700 border border-red-200/70';
     return 'bg-blue-100/70 text-blue-700 border border-blue-200/70';
   };
 
+  
   const getTypeLabel = (type) => {
     if (type === 'success') return 'Success';
     if (type === 'warning') return 'Warning';
-    if (type === 'error') return 'Critical';
+    if (type === 'error')   return 'Critical';
     return 'Information';
   };
 
+ 
   const handleMarkAsRead = async (id) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-
       await fetch(`${NOTIFICATION_API}/${id}/read`, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch {
-      // silent
+      
     }
   };
 
+ 
   const handleMarkAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-
       await fetch(`${NOTIFICATION_API}/read-all`, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch {
-      // silent
+      
     }
   };
 
@@ -196,186 +197,236 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     navigate('/login');
   };
 
-  const glassBase =
-    'inline-flex items-center gap-3 rounded-[22px] border border-white/50 bg-white/40 px-5 py-4 text-sm font-semibold text-slate-800 shadow-lg shadow-slate-200/40 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:bg-white/60';
-  const glassPrimary =
-    'inline-flex items-center gap-3 rounded-[22px] border border-blue-300/30 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-300/30 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-xl';
-  const glassPurple =
-    'inline-flex items-center gap-3 rounded-[22px] border border-violet-300/30 bg-gradient-to-r from-violet-600/90 to-indigo-600/90 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-300/30 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-xl';
-  const glassPink =
-    'inline-flex items-center gap-3 rounded-[22px] border border-fuchsia-300/30 bg-gradient-to-r from-fuchsia-600/90 to-purple-600/90 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-fuchsia-300/30 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-xl';
-  const glassGreen =
-    'inline-flex items-center gap-3 rounded-[22px] border border-emerald-300/30 bg-gradient-to-r from-emerald-600/90 to-green-600/90 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-emerald-300/30 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-xl';
-  const glassRed =
-    'inline-flex items-center gap-3 rounded-[22px] border border-red-200/70 bg-red-50/70 px-5 py-4 text-sm font-semibold text-red-700 shadow-lg shadow-red-100/30 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:bg-red-100/80';
+  const initials = currentUser?.name?.charAt(0)?.toUpperCase() || 'U';
+  const activePath = location.pathname;
 
+ 
   return (
-    <div className="relative z-50 overflow-visible rounded-[2rem] border border-white/60 bg-white/35 p-5 shadow-2xl shadow-slate-200/40 backdrop-blur-2xl sm:p-6">
-      <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white/50 via-blue-50/40 to-emerald-50/30" />
+    <>
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-600
+                         border border-white/10 shadow-2xl text-white">
 
-      <div className="relative flex flex-col gap-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-700">
-              UniHive Platform
-            </p>
-
-            <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{title}</h1>
-
-            {subtitle ? (
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                {subtitle}
-              </p>
-            ) : null}
-
-            {currentUser && (
-              <div className="mt-4 inline-flex items-center gap-3 rounded-full border border-white/60 bg-white/50 px-4 py-2.5 shadow-md backdrop-blur-xl">
-                {currentUser.avatar ? (
-                  <img
-                    src={currentUser.avatar}
-                    alt="User avatar"
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-green-600 text-sm font-bold text-white">
-                    {currentUser?.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </div>
-                )}
-
-                <div className="leading-tight">
-                  <p className="text-xs text-slate-500">Signed in as</p>
-                  <p className="text-sm font-semibold text-slate-800">
-                    {currentUser.name || 'User'} {currentUser.role ? `• ${formatRole(currentUser.role)}` : ''}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Logo */}
+        <div className="border-b border-white/20  px-5 py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-300">
+            UniHive Platform
+          </p>
+          <p className="mt-1 text-[15px] font-semibold text-white">UniHive</p>
         </div>
 
-        <div className="flex flex-wrap gap-4 overflow-visible">
+        {/* Nav links */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3">
+
+          {/* Overview */}
+          <p className="nav-section-label">Overview</p>
+
           {showBackHome && (
-            <Link to="/" className={glassBase}>
-              <span className="text-lg">🏠</span>
-              <span>Back to Home</span>
-            </Link>
+            <SidebarLink to="/" label="Back to Home" active={activePath === '/'}>
+              <Home size={15} strokeWidth={1.5} />
+            </SidebarLink>
           )}
 
           {currentUser && (
-            <Link to="/dashboard" className={glassBase}>
-              <span className="text-lg">📊</span>
-              <span>Dashboard</span>
-            </Link>
+            <SidebarLink to="/dashboard" label="Dashboard" active={activePath === '/dashboard'}>
+              <LayoutGrid size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+
+          {/* Modules */}
+          {currentUser && <p className="nav-section-label mt-3">Modules</p>}
+
+          {currentUser && (
+            <SidebarLink to="/profile" label="Profile" active={activePath === '/profile'}>
+              <User size={15} strokeWidth={1.5} />
+            </SidebarLink>
           )}
 
           {currentUser && (
-            <Link to="/profile" className={glassBase}>
-              <span className="text-lg">👤</span>
-              <span>My Profile</span>
-            </Link>
+            <SidebarLink to="/resourceShare" label="Resource Sharing" active={activePath === '/resourceShare'}>
+              <Folder size={15} strokeWidth={1.5} />
+            </SidebarLink>
           )}
 
           {currentUser && (
-            <Link to="/communication" className={glassPrimary}>
-              <span className="text-lg">💬</span>
-              <span>Communication Hub</span>
+            <SidebarLink to="/peerTutoring" label="Peer Tutoring" active={activePath === '/peerTutoring'}>
+              <GraduationCap size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+
+          {currentUser && (
+            <SidebarLink
+              to="/helpboard"
+              label="Help Exchange"
+              active={activePath === '/helpboard'}
+              badge={unreadCount > 0 ? unreadCount : null}
+            >
+              <LifeBuoy size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+
+          {currentUser && (
+            <SidebarLink to="/communication" label="Communication-Hub" active={activePath === '/communication'}>
+              <MessageSquare size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+
+          {/* Admin */}
+          {isAdmin && <p className="nav-section-label mt-3">Admin</p>}
+
+          {isAdmin && (
+            <SidebarLink to="/admin-analytics" label="Analytics" active={activePath === '/admin-analytics'}>
+              <BarChart2 size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+
+          {isAdmin && (
+            <SidebarLink to="/users" label="User Administration" active={activePath === '/users'}>
+              <Wrench size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+        </nav>
+
+        {/* User footer */}
+        <div className="border-t border-white/10 px-3 py-3">
+          {currentUser && (
+            <div className="mb-1 flex items-center gap-2.5 rounded-lg px-2 py-2">
+              {currentUser.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt="User avatar"
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
+                  {initials}
+                </div>
+              )}
+              <div className="min-w-0 leading-tight">
+                <p className="truncate text-xs font-semibold text-white">
+                  {currentUser.name || 'User'}
+                </p>
+                <p className="text-[10px] text-white/40">
+                  {formatRole(currentUser.role)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {currentUser ? (
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs text-white/40 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              <LogOut size={13} strokeWidth={1.5} />
+              Sign out
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs text-white/40 transition hover:bg-white/10 hover:text-white"
+            >
+              <LogOut size={13} strokeWidth={1.5} />
+              Sign in
             </Link>
           )}
+        </div>
+      </aside>
+
+      {/* Topbar */}
+      <header className="fixed left-56 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-6">
+        <div>
+          <p className="text-[11px] text-slate-400">UniHive / {title}</p>
+          <p className="text-sm font-semibold text-slate-800">{title}</p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
 
           {currentUser && (
             <div className="relative z-[200]" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen((prev) => !prev)}
-                className={`${glassPurple} relative`}
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50"
               >
-                <span className="text-lg">🔔</span>
-                <span>Notifications</span>
-
+                <Bell size={15} strokeWidth={1.5} />
                 {!loadingNotifications && unreadCount > 0 && (
-                  <span className="absolute -right-2 -top-2 inline-flex min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white shadow-lg">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
               </button>
 
+             
               {dropdownOpen && (
-                <div className="absolute left-0 top-full z-[99999] mt-3 w-[370px] rounded-[1.5rem] border border-white/60 bg-white/85 shadow-2xl backdrop-blur-2xl">
-                  <div className="border-b border-slate-200/80 bg-white/50 px-4 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-900">Recent Notifications</h3>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
-                        </p>
-                      </div>
+                <div className="absolute right-0 top-full z-[99999] mt-2 w-[370px] rounded-2xl border border-slate-200 bg-white shadow-xl">
 
-                      <button
-                        type="button"
-                        onClick={handleMarkAllAsRead}
-                        disabled={unreadCount === 0}
-                        className="rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        Mark all as read
-                      </button>
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Recent Notifications
+                      </h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
+                      </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={handleMarkAllAsRead}
+                      disabled={unreadCount === 0}
+                      className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Mark all as read
+                    </button>
                   </div>
 
                   <div className="max-h-[360px] overflow-y-auto">
                     {loadingNotifications ? (
-                      <div className="px-4 py-6 text-center text-sm text-slate-500">
-                        Loading notifications...
-                      </div>
+                      <p className="py-6 text-center text-sm text-slate-400">
+                        Loading notifications…
+                      </p>
                     ) : latestNotifications.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-sm text-slate-500">
+                      <p className="py-6 text-center text-sm text-slate-400">
                         No notifications are currently available.
-                      </div>
+                      </p>
                     ) : (
                       latestNotifications.map((item) => (
                         <div
                           key={item._id}
-                          className={`border-b border-slate-100/80 px-4 py-4 last:border-b-0 ${
-                            item.read ? 'bg-white/40' : 'bg-blue-50/50'
+                          className={`border-b border-slate-100 px-4 py-3 last:border-0 ${
+                            item.read ? 'bg-white' : 'bg-blue-50/60'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <div className="mb-2 flex flex-wrap items-center gap-2">
-                                <span
-                                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getTypeBadge(item.type)}`}
-                                >
+                              <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${getTypeBadge(item.type)}`}>
                                   {getTypeLabel(item.type)}
                                 </span>
-
                                 <span
-                                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
                                     item.read
-                                      ? 'bg-slate-100/80 text-slate-600 border border-slate-200'
-                                      : 'bg-blue-100/80 text-blue-700 border border-blue-200'
+                                      ? 'border-slate-200 bg-slate-100 text-slate-500'
+                                      : 'border-blue-200 bg-blue-100 text-blue-700'
                                   }`}
                                 >
                                   {item.read ? 'Read' : 'Unread'}
                                 </span>
                               </div>
-
                               <p className="truncate text-sm font-bold text-slate-900">
                                 {item.title}
                               </p>
-
-                              <p className="mt-1 text-xs leading-6 text-slate-600">
+                              <p className="mt-0.5 text-xs leading-5 text-slate-500">
                                 {item.message}
                               </p>
-
-                              <p className="mt-2 text-[11px] text-slate-500">
+                              <p className="mt-1.5 text-[11px] text-slate-400">
                                 Issued: {formatDate(item.createdAt)}
                               </p>
                             </div>
-
                             {!item.read && (
                               <button
                                 type="button"
                                 onClick={() => handleMarkAsRead(item._id)}
-                                className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-blue-700"
+                                className="shrink-0 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-blue-700"
                               >
                                 Mark read
                               </button>
@@ -386,11 +437,12 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                     )}
                   </div>
 
-                  <div className="border-t border-slate-200/80 bg-white/50 px-4 py-3">
+                  {/* Footer */}
+                  <div className="border-t border-slate-100 px-4 py-2.5">
                     <Link
                       to="/notifications"
                       onClick={() => setDropdownOpen(false)}
-                      className="block text-center text-sm font-semibold text-indigo-700 transition hover:text-indigo-800"
+                      className="block text-center text-xs font-semibold text-indigo-600 transition hover:text-indigo-800"
                     >
                       Open Notification Centre →
                     </Link>
@@ -400,35 +452,61 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
             </div>
           )}
 
-          {isAdmin && (
-            <Link to="/admin-analytics" className={glassPink}>
-              <span className="text-lg">📈</span>
-              <span>Administrative Analytics</span>
-            </Link>
-          )}
-
-          {isAdmin && (
-            <Link to="/users" className={glassGreen}>
-              <span className="text-lg">🛠️</span>
-              <span>User Administration</span>
-            </Link>
-          )}
-
-          {currentUser ? (
-            <button onClick={handleLogout} className={glassRed}>
-              <span className="text-lg">🚪</span>
-              <span>Sign Out</span>
-            </button>
-          ) : (
-            <Link to="/login" className={glassPrimary}>
-              <span className="text-lg">🔐</span>
-              <span>Sign In</span>
-            </Link>
+          {currentUser && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5">
+              {currentUser.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt="User avatar"
+                  className="h-6 w-6 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-semibold text-white">
+                  {initials}
+                </div>
+              )}
+              <span className="text-xs font-medium text-slate-700">
+                {currentUser.name || 'User'}
+              </span>
+            </div>
           )}
         </div>
-      </div>
-    </div>
+      </header>
+
+      <style>{`
+        .nav-section-label {
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          color: rgba(255,255,255,0.28);
+          padding: 0 10px 6px;
+          text-transform: uppercase;
+        }
+      `}</style>
+    </>
   );
 };
+
+
+const SidebarLink = ({ to, label, active, badge, children }) => (
+  <Link
+    to={to}
+    className={`group mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
+      active
+        ? 'bg-indigo-600 text-white'
+        : 'text-white hover:bg-white/10 hover:text-white'
+    }`}
+  >
+    <span className={`flex-shrink-0 ${active ? 'opacity-100' : 'opacity-60 group-hover:opacity-90'}`}>
+      {children}
+    </span>
+    <span className="flex-1">{label}</span>
+    {badge && (
+      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+        {badge > 99 ? '99+' : badge}
+      </span>
+    )}
+  </Link>
+);
 
 export default AppHeader;

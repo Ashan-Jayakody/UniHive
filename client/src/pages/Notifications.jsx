@@ -300,14 +300,10 @@ const Notifications = () => {
   };
 
   return (
-    <div className="app-shell min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+    <div className="px-4 py-8 sm:px-6 lg:px-10">
       <Toast show={toast.show} type={toast.type} message={toast.message} onClose={closeToast} />
 
       <div className="mx-auto max-w-7xl space-y-6">
-        <AppHeader
-          title="Notification Centre"
-          subtitle="Review platform alerts, monitor account activity, and manage communication updates through a structured notification workspace."
-        />
 
         <div className="grid gap-4 sm:grid-cols-3">
           {stats.map((item) => (

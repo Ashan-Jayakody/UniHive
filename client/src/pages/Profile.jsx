@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Toast from '../components/Toast';
-import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
+import ExpertMatch from '../components/ExpertMatch';
 
 const USER_API_BASE = 'http://localhost:5000/api/users';
 const THREAD_API_BASE = 'http://localhost:5000/api/threads';
@@ -16,6 +16,7 @@ const Profile = () => {
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [expertiseInput, setExpertiseInput] = useState('');
 
   const [toast, setToast] = useState({
     show: false,
@@ -28,6 +29,7 @@ const Profile = () => {
     email: '',
     password: '',
     avatar: '',
+    expertiseAreas: [],
   });
 
   const showToast = (type, message) => {
@@ -80,7 +82,9 @@ const Profile = () => {
         email: data.email || '',
         password: '',
         avatar: data.avatar || '',
+        expertiseAreas: Array.isArray(data.expertiseAreas) ? data.expertiseAreas : [],
       });
+      setExpertiseInput(Array.isArray(data.expertiseAreas) ? data.expertiseAreas.join(', ') : '');
     } catch (error) {
       showToast('error', error.message);
     } finally {
@@ -189,6 +193,7 @@ const Profile = () => {
         name: formData.name,
         email: formData.email,
         avatar: formData.avatar,
+        expertiseAreas: formData.expertiseAreas,
       };
 
       if (formData.password.trim()) {
@@ -305,14 +310,10 @@ const Profile = () => {
   ];
 
   return (
-    <div className="app-shell min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+    <div className="px-4 py-8 sm:px-6 lg:px-10">
       <Toast show={toast.show} type={toast.type} message={toast.message} onClose={closeToast} />
 
       <div className="mx-auto max-w-7xl space-y-6">
-        <AppHeader
-          title="My Profile"
-          subtitle="Review your account details, academic profile information, participation history, and saved discussions through a consolidated personal workspace."
-        />
 
         <div className="grid gap-4 sm:grid-cols-3">
           {statCards.map((item) => (
@@ -391,6 +392,15 @@ const Profile = () => {
                   <p className="text-sm text-slate-500">Saved Discussions</p>
                   <p className="mt-1 font-semibold text-slate-900">{savedThreads.length}</p>
                 </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
+  <p className="text-sm text-slate-500">Expertise Areas</p>
+  <p className="mt-1 font-semibold text-slate-900">
+    {profile?.expertiseAreas?.length
+      ? profile.expertiseAreas.join(', ')
+      : '-'}
+  </p>
+</div>
 
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">Helper Badge</p>
@@ -515,6 +525,30 @@ const Profile = () => {
                 />
               </div>
 
+              <div>
+  <label className="mb-2 block text-sm font-semibold text-slate-700">
+    Expertise Areas
+  </label>
+<input
+  type="text"
+  name="expertiseAreas"
+  value={expertiseInput}
+  onChange={(e) => {
+    setExpertiseInput(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      expertiseAreas: e.target.value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item !== ''),
+    }));
+  }}
+  placeholder="e.g. React, Node.js, Java"
+  disabled={saving || loading}
+  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+/>
+</div>
+              
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-sm font-semibold text-slate-700">Read-only account information</p>
                 <p className="mt-2 text-sm leading-7 text-slate-600">

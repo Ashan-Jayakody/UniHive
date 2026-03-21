@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const e = require('express');
 
 // GET LOGGED-IN USER PROFILE
 exports.getMyProfile = async (req, res) => {
@@ -18,6 +19,7 @@ exports.getMyProfile = async (req, res) => {
       faculty: user.faculty || '',
       course: user.course || '',
       academicYear: user.academicYear ?? '',
+      expertiseAreas: user.expertiseAreas || [],
       status: user.status || 'active',
       points: user.points ?? 0,
       helperBadge: user.helperBadge ?? false,
@@ -48,6 +50,8 @@ exports.updateProfile = async (req, res) => {
     user.name = req.body.name ?? user.name;
     user.email = req.body.email ?? user.email;
     user.avatar = req.body.avatar ?? user.avatar;
+
+    user.expertiseAreas = req.body.expertiseAreas ?? user.expertiseAreas;
 
     if (req.body.password && req.body.password.trim()) {
       user.password = req.body.password;
@@ -85,6 +89,7 @@ exports.updateProfile = async (req, res) => {
       faculty: updatedUser.faculty || '',
       course: updatedUser.course || '',
       academicYear: updatedUser.academicYear ?? '',
+      expertiseAreas: updatedUser.expertiseAreas || [],
       status: updatedUser.status || 'active',
       points: updatedUser.points ?? 0,
       helperBadge: updatedUser.helperBadge ?? false,
@@ -276,6 +281,7 @@ exports.updateUser = async (req, res) => {
     user.emailVerified = req.body.emailVerified ?? user.emailVerified;
     user.phoneVerified = req.body.phoneVerified ?? user.phoneVerified;
     user.avatar = req.body.avatar ?? user.avatar;
+    user.expertiseAreas = req.body.expertiseAreas ?? user.expertiseAreas;
 
     if (user.role === 'student') {
       user.faculty = req.body.faculty ?? user.faculty;
@@ -327,6 +333,7 @@ exports.updateUser = async (req, res) => {
         faculty: updatedUser.faculty,
         course: updatedUser.course,
         academicYear: updatedUser.academicYear,
+        expertiseAreas: updatedUser.expertiseAreas || [],
         status: updatedUser.status,
         points: updatedUser.points,
         helperBadge: updatedUser.helperBadge,

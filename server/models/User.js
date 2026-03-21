@@ -47,6 +47,12 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    expertiseAreas: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     status: {
       type: String,
       enum: ['active', 'deactivated', 'suspended', 'banned'],
