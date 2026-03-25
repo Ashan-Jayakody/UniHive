@@ -1,0 +1,434 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npmrc
+5 silly config load:file:C:\Users\POWER USER\.npmrc
+6 silly config load:file:C:\Users\POWER USER\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm audit fix
+8 verbose argv "audit" "fix"
+9 verbose logfile logs-max:10 dir:C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npm-cache\_logs\2026-03-21T06_29_29_756Z-
+10 verbose logfile C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npm-cache\_logs\2026-03-21T06_29_29_756Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:2197815296 maxSize:549453824 maxEntrySize:274726912
+13 silly logfile done cleaning log files
+14 silly audit bulk request {
+14 silly audit   '@mongodb-js/saslprep': [ '1.4.6' ],
+14 silly audit   '@socket.io/component-emitter': [ '3.1.2' ],
+14 silly audit   '@socketsecurity/socket-patch': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-android-arm64': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-darwin-arm64': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-darwin-x64': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-linux-arm': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-linux-arm64': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-linux-ia32': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-linux-x64': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-win32-arm64': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-win32-ia32': [ '2.0.0' ],
+14 silly audit   '@socketsecurity/socket-patch-win32-x64': [ '2.0.0' ],
+14 silly audit   '@types/cors': [ '2.8.19' ],
+14 silly audit   '@types/node': [ '25.5.0' ],
+14 silly audit   '@types/webidl-conversions': [ '7.0.3' ],
+14 silly audit   '@types/whatwg-url': [ '13.0.0' ],
+14 silly audit   '@types/ws': [ '8.18.1' ],
+14 silly audit   accepts: [ '2.0.0', '1.3.8' ],
+14 silly audit   anymatch: [ '3.1.3' ],
+14 silly audit   'append-field': [ '1.0.0' ],
+14 silly audit   'balanced-match': [ '4.0.4' ],
+14 silly audit   base64id: [ '2.0.0' ],
+14 silly audit   bcryptjs: [ '3.0.3' ],
+14 silly audit   'binary-extensions': [ '2.3.0' ],
+14 silly audit   'body-parser': [ '2.2.2' ],
+14 silly audit   'brace-expansion': [ '5.0.3' ],
+14 silly audit   braces: [ '3.0.3' ],
+14 silly audit   bson: [ '7.2.0' ],
+14 silly audit   'buffer-equal-constant-time': [ '1.0.1' ],
+14 silly audit   'buffer-from': [ '1.1.2' ],
+14 silly audit   busboy: [ '1.6.0' ],
+14 silly audit   bytes: [ '3.1.2' ],
+14 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+14 silly audit   'call-bound': [ '1.0.4' ],
+14 silly audit   chokidar: [ '3.6.0' ],
+14 silly audit   'concat-stream': [ '2.0.0' ],
+14 silly audit   'content-disposition': [ '1.0.1' ],
+14 silly audit   'content-type': [ '1.0.5' ],
+14 silly audit   cookie: [ '0.7.2' ],
+14 silly audit   'cookie-signature': [ '1.2.2' ],
+14 silly audit   cors: [ '2.8.6' ],
+14 silly audit   debug: [ '4.4.3' ],
+14 silly audit   depd: [ '2.0.0' ],
+14 silly audit   dotenv: [ '17.2.4' ],
+14 silly audit   'dunder-proto': [ '1.0.1' ],
+14 silly audit   'ecdsa-sig-formatter': [ '1.0.11' ],
+14 silly audit   'ee-first': [ '1.1.1' ],
+14 silly audit   encodeurl: [ '2.0.0' ],
+14 silly audit   'engine.io': [ '6.6.6' ],
+14 silly audit   'engine.io-parser': [ '5.2.3' ],
+14 silly audit   'mime-db': [ '1.52.0', '1.54.0' ],
+14 silly audit   'mime-types': [ '2.1.35', '3.0.2' ],
+14 silly audit   negotiator: [ '0.6.3', '1.0.0' ],
+14 silly audit   'es-define-property': [ '1.0.1' ],
+14 silly audit   'es-errors': [ '1.3.0' ],
+14 silly audit   'es-object-atoms': [ '1.1.1' ],
+14 silly audit   'escape-html': [ '1.0.3' ],
+14 silly audit   etag: [ '1.8.1' ],
+14 silly audit   express: [ '5.2.1' ],
+14 silly audit   'fill-range': [ '7.1.1' ],
+14 silly audit   finalhandler: [ '2.1.1' ],
+14 silly audit   forwarded: [ '0.2.0' ],
+14 silly audit   fresh: [ '2.0.0' ],
+14 silly audit   fsevents: [ '2.3.3' ],
+14 silly audit   'function-bind': [ '1.1.2' ],
+14 silly audit   'get-intrinsic': [ '1.3.0' ],
+14 silly audit   'get-proto': [ '1.0.1' ],
+14 silly audit   'glob-parent': [ '5.1.2' ],
+14 silly audit   gopd: [ '1.2.0' ],
+14 silly audit   'has-flag': [ '3.0.0' ],
+14 silly audit   'has-symbols': [ '1.1.0' ],
+14 silly audit   hasown: [ '2.0.2' ],
+14 silly audit   'http-errors': [ '2.0.1' ],
+14 silly audit   'iconv-lite': [ '0.7.2' ],
+14 silly audit   'ignore-by-default': [ '1.0.1' ],
+14 silly audit   inherits: [ '2.0.4' ],
+14 silly audit   'ipaddr.js': [ '1.9.1' ],
+14 silly audit   'is-binary-path': [ '2.1.0' ],
+14 silly audit   'is-extglob': [ '2.1.1' ],
+14 silly audit   'is-glob': [ '4.0.3' ],
+14 silly audit   'is-number': [ '7.0.0' ],
+14 silly audit   'is-promise': [ '4.0.0' ],
+14 silly audit   jsonwebtoken: [ '9.0.3' ],
+14 silly audit   jwa: [ '2.0.1' ],
+14 silly audit   jws: [ '4.0.1' ],
+14 silly audit   kareem: [ '3.2.0' ],
+14 silly audit   'lodash.includes': [ '4.3.0' ],
+14 silly audit   'lodash.isboolean': [ '3.0.3' ],
+14 silly audit   'lodash.isinteger': [ '4.0.4' ],
+14 silly audit   'lodash.isnumber': [ '3.0.3' ],
+14 silly audit   'lodash.isplainobject': [ '4.0.6' ],
+14 silly audit   'lodash.isstring': [ '4.0.1' ],
+14 silly audit   'lodash.once': [ '4.1.1' ],
+14 silly audit   'math-intrinsics': [ '1.1.0' ],
+14 silly audit   'media-typer': [ '1.1.0', '0.3.0' ],
+14 silly audit   'memory-pager': [ '1.5.0' ],
+14 silly audit   'merge-descriptors': [ '2.0.0' ],
+14 silly audit   minimatch: [ '10.2.4' ],
+14 silly audit   mongodb: [ '7.0.0' ],
+14 silly audit   'mongodb-connection-string-url': [ '7.0.1' ],
+14 silly audit   mongoose: [ '9.2.1' ],
+14 silly audit   mpath: [ '0.9.0' ],
+14 silly audit   mquery: [ '6.0.0' ],
+14 silly audit   ms: [ '2.1.3' ],
+14 silly audit   multer: [ '2.1.1' ],
+14 silly audit   'type-is': [ '1.6.18', '2.0.1' ],
+14 silly audit   nodemon: [ '3.1.14' ],
+14 silly audit   'normalize-path': [ '3.0.0' ],
+14 silly audit   'object-assign': [ '4.1.1' ],
+14 silly audit   'object-inspect': [ '1.13.4' ],
+14 silly audit   'on-finished': [ '2.4.1' ],
+14 silly audit   once: [ '1.4.0' ],
+14 silly audit   parseurl: [ '1.3.3' ],
+14 silly audit   'path-to-regexp': [ '8.3.0' ],
+14 silly audit   picomatch: [ '2.3.1' ],
+14 silly audit   'proxy-addr': [ '2.0.7' ],
+14 silly audit   'pstree.remy': [ '1.1.8' ],
+14 silly audit   punycode: [ '2.3.1' ],
+14 silly audit   qs: [ '6.15.0' ],
+14 silly audit   'range-parser': [ '1.2.1' ],
+14 silly audit   'raw-body': [ '3.0.2' ],
+14 silly audit   'readable-stream': [ '3.6.2' ],
+14 silly audit   readdirp: [ '3.6.0' ],
+14 silly audit   router: [ '2.2.0' ],
+14 silly audit   'safe-buffer': [ '5.2.1' ],
+14 silly audit   'safer-buffer': [ '2.1.2' ],
+14 silly audit   semver: [ '7.7.4' ],
+14 silly audit   send: [ '1.2.1' ],
+14 silly audit   'serve-static': [ '2.2.1' ],
+14 silly audit   setprototypeof: [ '1.2.0' ],
+14 silly audit   'side-channel': [ '1.1.0' ],
+14 silly audit   'side-channel-list': [ '1.0.0' ],
+14 silly audit   'side-channel-map': [ '1.0.1' ],
+14 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+14 silly audit   sift: [ '17.1.3' ],
+14 silly audit   'simple-update-notifier': [ '2.0.0' ],
+14 silly audit   socket: [ '1.1.73' ],
+14 silly audit   'socket.io': [ '4.8.3' ],
+14 silly audit   'socket.io-adapter': [ '2.5.6' ],
+14 silly audit   'socket.io-parser': [ '4.2.5' ],
+14 silly audit   'sparse-bitfield': [ '3.0.3' ],
+14 silly audit   statuses: [ '2.0.2' ],
+14 silly audit   streamsearch: [ '1.1.0' ],
+14 silly audit   string_decoder: [ '1.3.0' ],
+14 silly audit   'supports-color': [ '5.5.0' ],
+14 silly audit   'to-regex-range': [ '5.0.1' ],
+14 silly audit   toidentifier: [ '1.0.1' ],
+14 silly audit   touch: [ '3.1.1' ],
+14 silly audit   tr46: [ '5.1.1' ],
+14 silly audit   typedarray: [ '0.0.6' ],
+14 silly audit   undefsafe: [ '2.0.5' ],
+14 silly audit   'undici-types': [ '7.18.2' ],
+14 silly audit   unpipe: [ '1.0.0' ],
+14 silly audit   'util-deprecate': [ '1.0.2' ],
+14 silly audit   vary: [ '1.1.2' ],
+14 silly audit   'webidl-conversions': [ '7.0.0' ],
+14 silly audit   'whatwg-url': [ '14.2.0' ],
+14 silly audit   wrappy: [ '1.0.2' ],
+14 silly audit   ws: [ '8.18.3' ],
+14 silly audit   zod: [ '3.25.76' ]
+14 silly audit }
+15 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 670ms
+16 silly audit report {
+16 silly audit report   'socket.io-parser': [
+16 silly audit report     {
+16 silly audit report       id: 1115154,
+16 silly audit report       url: 'https://github.com/advisories/GHSA-677m-j7p3-52f9',
+16 silly audit report       title: 'socket.io allows an unbounded number of binary attachments',
+16 silly audit report       severity: 'high',
+16 silly audit report       vulnerable_versions: '>=4.0.0 <4.2.6',
+16 silly audit report       cwe: [Array],
+16 silly audit report       cvss: [Object]
+16 silly audit report     }
+16 silly audit report   ]
+16 silly audit report }
+17 silly packumentCache corgi:https://registry.npmjs.org/socket.io-parser cache-miss
+18 http cache https://registry.npmjs.org/socket.io-parser 36ms (cache hit)
+19 silly packumentCache corgi:https://registry.npmjs.org/socket.io-parser set size:66292 disposed:false
+20 silly packumentCache corgi:https://registry.npmjs.org/socket.io cache-miss
+21 http cache https://registry.npmjs.org/socket.io 16ms (cache hit)
+22 silly packumentCache corgi:https://registry.npmjs.org/socket.io set size:167232 disposed:false
+23 silly idealTree buildDeps
+24 silly fetch manifest socket.io-parser@~4.2.4
+25 silly packumentCache full:https://registry.npmjs.org/socket.io-parser cache-miss
+26 http fetch GET 200 https://registry.npmjs.org/socket.io-parser 191ms (cache miss)
+27 silly packumentCache full:https://registry.npmjs.org/socket.io-parser set size:undefined disposed:false
+28 silly placeDep ROOT socket.io-parser@4.2.6 REPLACE for: socket.io@4.8.3 want: ~4.2.4
+29 silly reify mark retired [
+29 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\socket.io-parser'
+29 silly reify ]
+30 silly reify moves {
+30 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\socket.io-parser': 'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\.socket.io-parser-xUaxSi3b'
+30 silly reify }
+31 silly audit bulk request {
+31 silly audit   '@mongodb-js/saslprep': [ '1.4.6' ],
+31 silly audit   '@socket.io/component-emitter': [ '3.1.2' ],
+31 silly audit   '@socketsecurity/socket-patch': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-android-arm64': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-darwin-arm64': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-darwin-x64': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-linux-arm': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-linux-arm64': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-linux-ia32': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-linux-x64': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-win32-arm64': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-win32-ia32': [ '2.0.0' ],
+31 silly audit   '@socketsecurity/socket-patch-win32-x64': [ '2.0.0' ],
+31 silly audit   '@types/cors': [ '2.8.19' ],
+31 silly audit   '@types/node': [ '25.5.0' ],
+31 silly audit   '@types/webidl-conversions': [ '7.0.3' ],
+31 silly audit   '@types/whatwg-url': [ '13.0.0' ],
+31 silly audit   '@types/ws': [ '8.18.1' ],
+31 silly audit   accepts: [ '2.0.0', '1.3.8' ],
+31 silly audit   anymatch: [ '3.1.3' ],
+31 silly audit   'append-field': [ '1.0.0' ],
+31 silly audit   'balanced-match': [ '4.0.4' ],
+31 silly audit   base64id: [ '2.0.0' ],
+31 silly audit   bcryptjs: [ '3.0.3' ],
+31 silly audit   'binary-extensions': [ '2.3.0' ],
+31 silly audit   'body-parser': [ '2.2.2' ],
+31 silly audit   'brace-expansion': [ '5.0.3' ],
+31 silly audit   braces: [ '3.0.3' ],
+31 silly audit   bson: [ '7.2.0' ],
+31 silly audit   'buffer-equal-constant-time': [ '1.0.1' ],
+31 silly audit   'buffer-from': [ '1.1.2' ],
+31 silly audit   busboy: [ '1.6.0' ],
+31 silly audit   bytes: [ '3.1.2' ],
+31 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+31 silly audit   'call-bound': [ '1.0.4' ],
+31 silly audit   chokidar: [ '3.6.0' ],
+31 silly audit   'concat-stream': [ '2.0.0' ],
+31 silly audit   'content-disposition': [ '1.0.1' ],
+31 silly audit   'content-type': [ '1.0.5' ],
+31 silly audit   cookie: [ '0.7.2' ],
+31 silly audit   'cookie-signature': [ '1.2.2' ],
+31 silly audit   cors: [ '2.8.6' ],
+31 silly audit   debug: [ '4.4.3' ],
+31 silly audit   depd: [ '2.0.0' ],
+31 silly audit   dotenv: [ '17.2.4' ],
+31 silly audit   'dunder-proto': [ '1.0.1' ],
+31 silly audit   'ecdsa-sig-formatter': [ '1.0.11' ],
+31 silly audit   'ee-first': [ '1.1.1' ],
+31 silly audit   encodeurl: [ '2.0.0' ],
+31 silly audit   'engine.io': [ '6.6.6' ],
+31 silly audit   'engine.io-parser': [ '5.2.3' ],
+31 silly audit   'mime-db': [ '1.52.0', '1.54.0' ],
+31 silly audit   'mime-types': [ '2.1.35', '3.0.2' ],
+31 silly audit   negotiator: [ '0.6.3', '1.0.0' ],
+31 silly audit   'es-define-property': [ '1.0.1' ],
+31 silly audit   'es-errors': [ '1.3.0' ],
+31 silly audit   'es-object-atoms': [ '1.1.1' ],
+31 silly audit   'escape-html': [ '1.0.3' ],
+31 silly audit   etag: [ '1.8.1' ],
+31 silly audit   express: [ '5.2.1' ],
+31 silly audit   'fill-range': [ '7.1.1' ],
+31 silly audit   finalhandler: [ '2.1.1' ],
+31 silly audit   forwarded: [ '0.2.0' ],
+31 silly audit   fresh: [ '2.0.0' ],
+31 silly audit   fsevents: [ '2.3.3' ],
+31 silly audit   'function-bind': [ '1.1.2' ],
+31 silly audit   'get-intrinsic': [ '1.3.0' ],
+31 silly audit   'get-proto': [ '1.0.1' ],
+31 silly audit   'glob-parent': [ '5.1.2' ],
+31 silly audit   gopd: [ '1.2.0' ],
+31 silly audit   'has-flag': [ '3.0.0' ],
+31 silly audit   'has-symbols': [ '1.1.0' ],
+31 silly audit   hasown: [ '2.0.2' ],
+31 silly audit   'http-errors': [ '2.0.1' ],
+31 silly audit   'iconv-lite': [ '0.7.2' ],
+31 silly audit   'ignore-by-default': [ '1.0.1' ],
+31 silly audit   inherits: [ '2.0.4' ],
+31 silly audit   'ipaddr.js': [ '1.9.1' ],
+31 silly audit   'is-binary-path': [ '2.1.0' ],
+31 silly audit   'is-extglob': [ '2.1.1' ],
+31 silly audit   'is-glob': [ '4.0.3' ],
+31 silly audit   'is-number': [ '7.0.0' ],
+31 silly audit   'is-promise': [ '4.0.0' ],
+31 silly audit   jsonwebtoken: [ '9.0.3' ],
+31 silly audit   jwa: [ '2.0.1' ],
+31 silly audit   jws: [ '4.0.1' ],
+31 silly audit   kareem: [ '3.2.0' ],
+31 silly audit   'lodash.includes': [ '4.3.0' ],
+31 silly audit   'lodash.isboolean': [ '3.0.3' ],
+31 silly audit   'lodash.isinteger': [ '4.0.4' ],
+31 silly audit   'lodash.isnumber': [ '3.0.3' ],
+31 silly audit   'lodash.isplainobject': [ '4.0.6' ],
+31 silly audit   'lodash.isstring': [ '4.0.1' ],
+31 silly audit   'lodash.once': [ '4.1.1' ],
+31 silly audit   'math-intrinsics': [ '1.1.0' ],
+31 silly audit   'media-typer': [ '1.1.0', '0.3.0' ],
+31 silly audit   'memory-pager': [ '1.5.0' ],
+31 silly audit   'merge-descriptors': [ '2.0.0' ],
+31 silly audit   minimatch: [ '10.2.4' ],
+31 silly audit   mongodb: [ '7.0.0' ],
+31 silly audit   'mongodb-connection-string-url': [ '7.0.1' ],
+31 silly audit   mongoose: [ '9.2.1' ],
+31 silly audit   mpath: [ '0.9.0' ],
+31 silly audit   mquery: [ '6.0.0' ],
+31 silly audit   ms: [ '2.1.3' ],
+31 silly audit   multer: [ '2.1.1' ],
+31 silly audit   'type-is': [ '1.6.18', '2.0.1' ],
+31 silly audit   nodemon: [ '3.1.14' ],
+31 silly audit   'normalize-path': [ '3.0.0' ],
+31 silly audit   'object-assign': [ '4.1.1' ],
+31 silly audit   'object-inspect': [ '1.13.4' ],
+31 silly audit   'on-finished': [ '2.4.1' ],
+31 silly audit   once: [ '1.4.0' ],
+31 silly audit   parseurl: [ '1.3.3' ],
+31 silly audit   'path-to-regexp': [ '8.3.0' ],
+31 silly audit   picomatch: [ '2.3.1' ],
+31 silly audit   'proxy-addr': [ '2.0.7' ],
+31 silly audit   'pstree.remy': [ '1.1.8' ],
+31 silly audit   punycode: [ '2.3.1' ],
+31 silly audit   qs: [ '6.15.0' ],
+31 silly audit   'range-parser': [ '1.2.1' ],
+31 silly audit   'raw-body': [ '3.0.2' ],
+31 silly audit   'readable-stream': [ '3.6.2' ],
+31 silly audit   readdirp: [ '3.6.0' ],
+31 silly audit   router: [ '2.2.0' ],
+31 silly audit   'safe-buffer': [ '5.2.1' ],
+31 silly audit   'safer-buffer': [ '2.1.2' ],
+31 silly audit   semver: [ '7.7.4' ],
+31 silly audit   send: [ '1.2.1' ],
+31 silly audit   'serve-static': [ '2.2.1' ],
+31 silly audit   setprototypeof: [ '1.2.0' ],
+31 silly audit   'side-channel': [ '1.1.0' ],
+31 silly audit   'side-channel-list': [ '1.0.0' ],
+31 silly audit   'side-channel-map': [ '1.0.1' ],
+31 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+31 silly audit   sift: [ '17.1.3' ],
+31 silly audit   'simple-update-notifier': [ '2.0.0' ],
+31 silly audit   socket: [ '1.1.73' ],
+31 silly audit   'socket.io': [ '4.8.3' ],
+31 silly audit   'socket.io-adapter': [ '2.5.6' ],
+31 silly audit   'sparse-bitfield': [ '3.0.3' ],
+31 silly audit   statuses: [ '2.0.2' ],
+31 silly audit   streamsearch: [ '1.1.0' ],
+31 silly audit   string_decoder: [ '1.3.0' ],
+31 silly audit   'supports-color': [ '5.5.0' ],
+31 silly audit   'to-regex-range': [ '5.0.1' ],
+31 silly audit   toidentifier: [ '1.0.1' ],
+31 silly audit   touch: [ '3.1.1' ],
+31 silly audit   tr46: [ '5.1.1' ],
+31 silly audit   typedarray: [ '0.0.6' ],
+31 silly audit   undefsafe: [ '2.0.5' ],
+31 silly audit   'undici-types': [ '7.18.2' ],
+31 silly audit   unpipe: [ '1.0.0' ],
+31 silly audit   'util-deprecate': [ '1.0.2' ],
+31 silly audit   vary: [ '1.1.2' ],
+31 silly audit   'webidl-conversions': [ '7.0.0' ],
+31 silly audit   'whatwg-url': [ '14.2.0' ],
+31 silly audit   wrappy: [ '1.0.2' ],
+31 silly audit   ws: [ '8.18.3' ],
+31 silly audit   zod: [ '3.25.76' ],
+31 silly audit   'socket.io-parser': [ '4.2.6' ]
+31 silly audit }
+32 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\fsevents
+33 silly reify mark deleted [
+33 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\fsevents'
+33 silly reify ]
+34 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-win32-ia32
+35 silly reify mark deleted [
+35 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-win32-ia32'
+35 silly reify ]
+36 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-win32-arm64
+37 silly reify mark deleted [
+37 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-win32-arm64'
+37 silly reify ]
+38 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-linux-x64
+39 silly reify mark deleted [
+39 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-linux-x64'
+39 silly reify ]
+40 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-linux-ia32
+41 silly reify mark deleted [
+41 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-linux-ia32'
+41 silly reify ]
+42 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-linux-arm64
+43 silly reify mark deleted [
+43 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-linux-arm64'
+43 silly reify ]
+44 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-linux-arm
+45 silly reify mark deleted [
+45 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-linux-arm'
+45 silly reify ]
+46 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-darwin-x64
+47 silly reify mark deleted [
+47 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-darwin-x64'
+47 silly reify ]
+48 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-darwin-arm64
+49 silly reify mark deleted [
+49 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-darwin-arm64'
+49 silly reify ]
+50 verbose reify failed optional dependency C:\Users\POWER USER\Documents\GitHub\UniHive\server\node_modules\@socketsecurity\socket-patch-android-arm64
+51 silly reify mark deleted [
+51 silly reify   'C:\\Users\\POWER USER\\Documents\\GitHub\\UniHive\\server\\node_modules\\@socketsecurity\\socket-patch-android-arm64'
+51 silly reify ]
+52 http cache socket.io-parser@https://registry.npmjs.org/socket.io-parser/-/socket.io-parser-4.2.6.tgz 1ms (cache hit)
+53 silly tarball no local data for socket.io-parser@https://registry.npmjs.org/socket.io-parser/-/socket.io-parser-4.2.6.tgz. Extracting by manifest.
+54 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 829ms
+55 silly audit report {}
+56 http fetch GET 200 https://registry.npmjs.org/socket.io-parser/-/socket.io-parser-4.2.6.tgz 869ms (cache miss)
+57 silly ADD
+58 silly ADD
+59 silly ADD
+60 silly ADD
+61 silly ADD
+62 silly ADD
+63 silly ADD
+64 silly ADD
+65 silly ADD
+66 silly ADD
+67 silly CHANGE node_modules/socket.io-parser
+68 verbose cwd C:\Users\POWER USER\Documents\GitHub\UniHive\server
+69 verbose os Windows_NT 10.0.22621
+70 verbose node v22.14.0
+71 verbose npm  v10.9.2
+72 verbose exit 0
+73 info ok
