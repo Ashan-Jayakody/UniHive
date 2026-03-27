@@ -7,7 +7,7 @@ import {
   Wrench, Bell, LogOut, MessageSquare
 } from 'lucide-react';
 
-const NOTIFICATION_API = 'http://localhost:5000/api/notifications';
+const NOTIFICATION_API = 'http://localhost:5001/api/notifications';
 
 const getCurrentUser = () => {
   try {

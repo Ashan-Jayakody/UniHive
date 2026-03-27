@@ -12,7 +12,7 @@ const MyInvitations = () => {
     const fetchInvitations = async () => {
         try {
             const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-            const response = await fetch('http://localhost:5000/api/request/invitations', {
+            const response = await fetch('http://localhost:5001/api/request/invitations', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -32,7 +32,7 @@ const MyInvitations = () => {
     const handleAccept = async (requestId) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/request/${requestId}/accept`, {
+            const response = await fetch(`http://localhost:5001/api/request/${requestId}/accept`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
