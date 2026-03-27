@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Calendar, Clock, Users, Link as LinkIcon, Plus, CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
+import { Calendar, Clock, Users, Link as LinkIcon, Plus, CheckCircle, XCircle, AlertCircle, Info, Pencil, Trash2 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5001/api/sessions';
 
@@ -11,6 +11,9 @@ const PeerTutoring = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [selectedSessionParticipants, setSelectedSessionParticipants] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(null); // stores sessionId
   const [feedbackData, setFeedbackData] = useState({ rating: 5, comment: '' });
@@ -168,10 +171,8 @@ const PeerTutoring = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleCreateSession = async (e) => {
-    e.preventDefault();
-    
-    // Frontend Validation
+  // Shared validation for both create and update
+  const validateForm = () => {
     const errors = {};
     if (!formData.topic || formData.topic.trim().length < 5) errors.topic = 'Topic must be at least 5 characters.';
     if (!formData.description || formData.description.trim().length < 10) errors.description = 'Description must be at least 10 characters.';
@@ -180,7 +181,13 @@ const PeerTutoring = () => {
     if (!formData.time) errors.time = 'Time is required.';
     if (!formData.capacity || parseInt(formData.capacity) <= 0) errors.capacity = 'Capacity must be positive.';
     if (!formData.meetingLink || !formData.meetingLink.startsWith('http')) errors.meetingLink = 'Invalid meeting link (must start with http/https).';
+    return errors;
+  };
+
+  const handleCreateSession = async (e) => {
+    e.preventDefault();
     
+    const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -204,6 +211,72 @@ const PeerTutoring = () => {
       setFormData({ topic: '', description: '', date: '', time: '', capacity: '', meetingLink: '' });
       fetchSessions();
       alert('Session created successfully and is pending admin approval.');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleEditClick = (session) => {
+    setEditingSessionId(session._id);
+    setFormData({
+      topic: session.topic,
+      description: session.description,
+      date: session.date ? new Date(session.date).toISOString().split('T')[0] : '',
+      time: session.time,
+      capacity: session.capacity.toString(),
+      meetingLink: session.meetingLink
+    });
+    setFormErrors({});
+    setShowEditModal(true);
+  };
+
+  const handleUpdateSession = async (e) => {
+    e.preventDefault();
+    
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/${editingSessionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to update session');
+      
+      setShowEditModal(false);
+      setEditingSessionId(null);
+      setFormData({ topic: '', description: '', date: '', time: '', capacity: '', meetingLink: '' });
+      fetchSessions();
+      alert('Session updated successfully.');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/${sessionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to delete session');
+      
+      setShowDeleteConfirm(null);
+      fetchSessions();
+      fetchMyEnrollments();
+      alert('Session deleted successfully.');
     } catch (err) {
       alert(err.message);
     }
@@ -263,6 +336,96 @@ const PeerTutoring = () => {
     </div>
   );
 
+  // Reusable session form (shared between Create and Edit modals)
+  const SessionForm = ({ onSubmit, submitLabel, onCancel }) => (
+    <form onSubmit={onSubmit} className="p-6 space-y-4">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Topic</label>
+        <input 
+          name="topic" value={formData.topic} onChange={handleInputChange}
+          placeholder="e.g. Advanced Calculus Review"
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+            formErrors.topic ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+          }`}
+        />
+        {formErrors.topic && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.topic}</p>}
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Description</label>
+        <textarea 
+          name="description" value={formData.description} onChange={handleInputChange}
+          placeholder="Describe what will be covered..."
+          rows="3"
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+            formErrors.description ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+          }`}
+        />
+        {formErrors.description && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.description}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Date</label>
+          <input 
+            type="date" name="date" value={formData.date} onChange={handleInputChange}
+            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+              formErrors.date ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+            }`}
+          />
+          {formErrors.date && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.date}</p>}
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Time</label>
+          <input 
+            type="time" name="time" value={formData.time} onChange={handleInputChange}
+            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+              formErrors.time ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+            }`}
+          />
+          {formErrors.time && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.time}</p>}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Capacity</label>
+          <input 
+            type="number" name="capacity" value={formData.capacity} onChange={handleInputChange}
+            placeholder="Max students"
+            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+              formErrors.capacity ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+            }`}
+          />
+          {formErrors.capacity && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.capacity}</p>}
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Meeting Link</label>
+          <input 
+            name="meetingLink" value={formData.meetingLink} onChange={handleInputChange}
+            placeholder="Zoom / Meet link"
+            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+              formErrors.meetingLink ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+            }`}
+          />
+          {formErrors.meetingLink && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.meetingLink}</p>}
+        </div>
+      </div>
+
+      <div className="pt-4 flex gap-3">
+        <button 
+          type="button" onClick={onCancel}
+          className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit"
+          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-200 transition active:scale-95"
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -303,7 +466,28 @@ const PeerTutoring = () => {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
                   <Users size={20} strokeWidth={1.5} />
                 </div>
-                {getStatusBadge(session.status)}
+                <div className="flex items-center gap-2">
+                  {/* Edit & Delete buttons for the session creator */}
+                  {session.tutor?._id === currentUser._id && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleEditClick(session)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                        title="Edit Session"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(session._id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                        title="Delete Session"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {getStatusBadge(session.status)}
+                </div>
               </div>
               
               <div className="flex justify-between items-start gap-2 mb-1">
@@ -461,93 +645,59 @@ const PeerTutoring = () => {
               <h2 className="text-xl font-bold">Create Tutoring Session</h2>
               <button onClick={() => setShowCreateModal(false)} className="hover:bg-white/10 p-1.5 rounded-lg transition"><XCircle size={22}/></button>
             </div>
-            
-            <form onSubmit={handleCreateSession} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Topic</label>
-                <input 
-                  name="topic" value={formData.topic} onChange={handleInputChange}
-                  placeholder="e.g. Advanced Calculus Review"
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-                    formErrors.topic ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-                  }`}
-                />
-                {formErrors.topic && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.topic}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Description</label>
-                <textarea 
-                  name="description" value={formData.description} onChange={handleInputChange}
-                  placeholder="Describe what will be covered..."
-                  rows="3"
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-                    formErrors.description ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-                  }`}
-                />
-                {formErrors.description && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.description}</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Date</label>
-                  <input 
-                    type="date" name="date" value={formData.date} onChange={handleInputChange}
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-                      formErrors.date ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-                    }`}
-                  />
-                  {formErrors.date && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.date}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Time</label>
-                  <input 
-                    type="time" name="time" value={formData.time} onChange={handleInputChange}
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-                      formErrors.time ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-                    }`}
-                  />
-                  {formErrors.time && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.time}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Capacity</label>
-                  <input 
-                    type="number" name="capacity" value={formData.capacity} onChange={handleInputChange}
-                    placeholder="Max students"
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-                      formErrors.capacity ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-                    }`}
-                  />
-                  {formErrors.capacity && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.capacity}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Meeting Link</label>
-                  <input 
-                    name="meetingLink" value={formData.meetingLink} onChange={handleInputChange}
-                    placeholder="Zoom / Meet link"
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-                      formErrors.meetingLink ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-                    }`}
-                  />
-                  {formErrors.meetingLink && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.meetingLink}</p>}
-                </div>
-              </div>
+            <SessionForm 
+              onSubmit={handleCreateSession} 
+              submitLabel="Create Session" 
+              onCancel={() => setShowCreateModal(false)} 
+            />
+          </div>
+        </div>
+      )}
 
-              <div className="pt-4 flex gap-3">
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-amber-500 text-white">
+              <h2 className="text-xl font-bold">Edit Tutoring Session</h2>
+              <button onClick={() => { setShowEditModal(false); setEditingSessionId(null); }} className="hover:bg-white/10 p-1.5 rounded-lg transition"><XCircle size={22}/></button>
+            </div>
+            <SessionForm 
+              onSubmit={handleUpdateSession} 
+              submitLabel="Update Session" 
+              onCancel={() => { setShowEditModal(false); setEditingSessionId(null); }} 
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 mb-4">
+                <Trash2 size={24} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Session?</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                This action cannot be undone. All enrollments and feedback for this session will also be deleted.
+              </p>
+              <div className="flex gap-3">
                 <button 
-                  type="button" onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition border border-slate-200"
                 >
                   Cancel
                 </button>
                 <button 
-                  type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-200 transition active:scale-95"
+                  onClick={() => handleDeleteSession(showDeleteConfirm)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-red-100 transition active:scale-95"
                 >
-                  Create Session
+                  Delete
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

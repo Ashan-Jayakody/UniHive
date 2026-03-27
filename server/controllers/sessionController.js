@@ -52,6 +52,82 @@ exports.createSession = async (req, res) => {
     }
 };
 
+// Update a session (Tutor who created it only)
+exports.updateSession = async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ message: 'Session not found' });
+
+        // Only the tutor who created the session can update it
+        if (session.tutor.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'You can only edit sessions you created' });
+        }
+
+
+        const { topic, description, date, time, capacity, meetingLink } = req.body;
+
+        // Same validation as create
+        if (!topic || topic.length < 5) {
+            return res.status(400).json({ message: 'Topic is required and must be at least 5 characters long.' });
+        }
+        if (!description || description.length < 10) {
+            return res.status(400).json({ message: 'Description is required and must be at least 10 characters long.' });
+        }
+        if (!date) {
+            return res.status(400).json({ message: 'Date is required.' });
+        }
+
+        const selectedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        if (selectedDate < today) {
+            return res.status(400).json({ message: 'Session date cannot be in the past.' });
+        }
+
+        if (!capacity || parseInt(capacity) <= 0) {
+            return res.status(400).json({ message: 'Capacity must be a positive number.' });
+        }
+
+        if (!meetingLink || !meetingLink.startsWith('http')) {
+            return res.status(400).json({ message: 'A valid meeting link (starting with http/https) is required.' });
+        }
+
+        session.topic = topic;
+        session.description = description;
+        session.date = date;
+        session.time = time;
+        session.capacity = parseInt(capacity);
+        session.meetingLink = meetingLink;
+
+        const updatedSession = await session.save();
+        res.status(200).json(updatedSession);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Delete a session (Tutor who created it or Admin)
+exports.deleteSession = async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.id);
+        if (!session) return res.status(404).json({ message: 'Session not found' });
+
+        // Only the tutor who created the session or an admin can delete it
+        if (session.tutor.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'You do not have permission to delete this session' });
+        }
+
+        // Clean up related data
+        await Enrollment.deleteMany({ session: session._id });
+        await SessionFeedback.deleteMany({ session: session._id });
+        await Session.findByIdAndDelete(session._id);
+
+        res.status(200).json({ message: 'Session deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Get all sessions (filtered by status and role)
 exports.getAllSessions = async (req, res) => {
     try {

@@ -10,6 +10,8 @@ router.post('/', sessionController.createSession);
 router.get('/', sessionController.getAllSessions);
 router.get('/my-enrollments', sessionController.getMyEnrollments);
 router.get('/:id', sessionController.getSessionById);
+router.put('/:id', sessionController.updateSession);
+router.delete('/:id', sessionController.deleteSession);
 router.put('/:id/status', sessionController.updateSessionStatus);
 router.post('/:id/enroll', sessionController.enrollSession);
 router.get('/:id/participants', sessionController.getSessionParticipants);
