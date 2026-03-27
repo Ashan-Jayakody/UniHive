@@ -58,6 +58,9 @@ app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
 // Student help request routes
 app.use('/api/request', require('./routes/helpRequestRoutes'));
 
+// Peer Tutoring session routes
+app.use('/api/sessions', require('./routes/sessionRoutes'));
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {

@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResendVerification from "./pages/ResendVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PeerTutoring from "./pages/PeerTutoring";
 
 const AppLayout = () => (
   <div className="min-h-screen bg-slate-50 ">
@@ -112,6 +113,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/peerTutoring"
+            element={
+              <ProtectedRoute>
+                <PeerTutoring />
               </ProtectedRoute>
             }
           />
