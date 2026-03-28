@@ -3,8 +3,6 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import UserManagement from './pages/UserManagement';
-import AcademicCommunication from './pages/AcademicCommunication';
 
 function App() {
   return (
@@ -14,8 +12,6 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/users" element={<UserManagement />} />
-        <Route path="/communication" element={<AcademicCommunication />} />
       </Routes>
     </Router>
   );

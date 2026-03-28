@@ -1,153 +1,267 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Toast from '../components/Toast';
+
+const API_BASE = 'http://localhost:5000/api/auth';
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: 'success',
+    message: '',
+  });
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
   };
 
-  const handleSubmit = async (e) => {
+  const closeToast = () => {
+    setToast({
+      show: false,
+      type: 'success',
+      message: '',
+    });
+  };
+
+  const handleChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    setIsSubmitting(true);
+
+    if (!formData.email.trim() || !formData.password.trim()) {
+      showToast('error', 'Please enter both email and password.');
+      return;
+    }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      setLoading(true);
+
+      const response = await fetch(`${API_BASE}/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || 'Unable to sign in');
       }
 
       localStorage.setItem('token', data.token);
-      setSuccess('Login successful. Redirecting to dashboard...');
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          _id: data._id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          faculty: data.faculty || '',
+          course: data.course || '',
+          academicYear: data.academicYear || '',
+          status: data.status || 'active',
+          points: data.points ?? 0,
+          helperBadge: data.helperBadge ?? false,
+          emailVerified: data.emailVerified ?? false,
+          phoneVerified: data.phoneVerified ?? false,
+          avatar: data.avatar || '',
+        })
+      );
+
+      if (
+        data.status === 'deactivated' ||
+        data.status === 'suspended' ||
+        data.status === 'banned'
+      ) {
+        localStorage.setItem('blockedStatus', data.status);
+        showToast('warning', `Your account is currently ${data.status}. Redirecting...`);
+
+        setTimeout(() => {
+          navigate('/blocked-account');
+        }, 1000);
+
+        return;
+      }
+
+      showToast('success', 'Sign-in completed successfully');
 
       setTimeout(() => {
         navigate('/dashboard');
       }, 900);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      showToast('error', error.message);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="app-shell flex items-center justify-center overflow-hidden px-4 py-8 sm:px-6 lg:px-10">
-      <div className="grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/60 bg-white/70 shadow-2xl shadow-slate-200 backdrop-blur-xl lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="bg-slate-950 px-6 py-8 text-white sm:px-8 lg:px-10 lg:py-12">
-          <div className="max-w-md">
-            <p className="inline-flex rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-blue-200">
-              UniHive Access
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-emerald-50 px-4 py-8 sm:px-6 lg:px-8">
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={closeToast}
+      />
+
+      <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-2xl backdrop-blur-sm lg:min-h-[700px] lg:grid-cols-2">
+        <div className="hidden bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-600 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-100">
+              UniHive Platform
             </p>
 
-            <h1 className="mt-6 text-4xl font-bold leading-tight">
-              Welcome back to your academic workspace.
+            <h1 className="mt-5 max-w-xl text-5xl font-bold leading-[1.15]">
+              Welcome back to your academic collaboration environment.
             </h1>
 
-            <p className="mt-4 text-base leading-7 text-slate-300">
-              Sign in to access your account, continue with your role-based portal experience, and manage platform features through a secure professional interface.
+            <p className="mt-6 max-w-xl text-base leading-8 text-blue-50/95">
+              Sign in to access your dashboard, account profile, communication
+              workspace, saved discussions, live notifications, and
+              administrative tools.
             </p>
-
-            <div className="mt-8 grid gap-4">
-              {[
-                'Secure user authentication',
-                'Role-based access control',
-                'Streamlined portal experience',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
           </div>
-        </section>
 
-        <section className="px-6 py-8 sm:px-8 lg:px-12 lg:py-12">
-          <div className="mx-auto max-w-md">
-            <div className="mb-8">
-              <Link to="/" className="text-sm font-semibold text-blue-700 transition hover:text-blue-800">
-                ← Back to Home
-              </Link>
-              <h2 className="mt-4 text-3xl font-bold text-slate-900">Sign In</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Enter your university account details to continue.
+          <div className="space-y-4">
+            <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-sm font-semibold">Centralised academic experience</p>
+              <p className="mt-2 text-sm leading-7 text-blue-50/95">
+                Access discussions, notifications, profile tools, and platform
+                services through one integrated workspace.
               </p>
             </div>
 
-            {error && (
-              <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-                {error}
-              </div>
-            )}
+            <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-sm font-semibold">Secure role-based access</p>
+              <p className="mt-2 text-sm leading-7 text-blue-50/95">
+                UniHive supports controlled access for students, faculty members,
+                and administrators.
+              </p>
+            </div>
 
-            {success && (
-              <div className="mb-5 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-                {success}
-              </div>
-            )}
+            <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-sm font-semibold">Real-time academic updates</p>
+              <p className="mt-2 text-sm leading-7 text-blue-50/95">
+                Stay informed with live notifications, platform alerts, and
+                communication activity as it happens.
+              </p>
+            </div>
+          </div>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="flex items-center bg-white/80 p-6 sm:p-10 lg:p-12">
+          <div className="mx-auto w-full max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-700">
+              Account Access
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold text-slate-900 sm:text-5xl">
+              Sign In to UniHive
+            </h2>
+
+            <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+              Enter your registered email address and password to continue to the
+              platform.
+            </p>
+
+            <form onSubmit={handleLogin} className="mt-8 grid gap-5">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   name="email"
-                  placeholder="Enter your email"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  disabled={isSubmitting}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  placeholder="Enter your registered email address"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Password</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Password
+                </label>
                 <input
                   type="password"
                   name="password"
-                  placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  disabled={isSubmitting}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  placeholder="Enter your password"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                 />
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
+                >
+                  Forgot Password?
+                </Link>
+
+                <Link
+                  to="/register"
+                  className="text-sm font-semibold text-slate-600 transition hover:text-slate-800"
+                >
+                  Create Account
+                </Link>
               </div>
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={loading}
+                className="rounded-2xl bg-blue-600 px-5 py-3.5 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting ? 'Logging in...' : 'Login to UniHive'}
+                {loading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-slate-500">
-              Don’t have an account?{' '}
-              <Link to="/register" className="font-semibold text-green-700 hover:text-green-800">
-                Create one now
+            <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-700">Important Note</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Please use the same registered email address and password associated
+                with your UniHive account. If you no longer remember your password,
+                use the password recovery option above.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <Link
+                to="/"
+                className="text-sm font-semibold text-blue-700 transition hover:text-blue-800"
+              >
+                ← Back to Home
               </Link>
-            </p>
+            </div>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );

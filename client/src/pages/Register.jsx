@@ -1,6 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import faculties from '../utils/faculties';
+import Toast from '../components/Toast';
+
+const API_BASE = 'http://localhost:5000/api/auth';
+
+const facultyOptions = ['Computing', 'Engineering', 'Business', 'Humanities'];
+
+const courseMap = {
+  Computing: ['Software Engineering', 'Computer Science', 'Cyber Security', 'Data Science'],
+  Engineering: ['Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering'],
+  Business: ['Business Administration', 'Accounting', 'Finance', 'Marketing'],
+  Humanities: ['Psychology', 'English', 'International Relations'],
+};
+
+const academicYearOptions = ['1', '2', '3', '4'];
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,252 +28,220 @@ const Register = () => {
     academicYear: '',
   });
 
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+
+  const [toast, setToast] = useState({
+    show: false,
+    type: 'success',
+    message: '',
+  });
+
+  const showToast = (type, message) => {
+    setToast({
+      show: true,
+      type,
+      message,
+    });
+  };
+
+  const closeToast = () => {
+    setToast({
+      show: false,
+      type: 'success',
+      message: '',
+    });
+  };
+
+  const availableCourses = formData.faculty ? courseMap[formData.faculty] || [] : [];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    let updatedData = { ...formData, [name]: value };
+    let updated = {
+      ...formData,
+      [name]: value,
+    };
 
     if (name === 'role') {
       if (value === 'admin') {
-        updatedData = {
-          ...updatedData,
-          faculty: '',
-          course: '',
-          academicYear: '',
-        };
+        updated.faculty = '';
+        updated.course = '';
+        updated.academicYear = '';
       } else if (value === 'faculty') {
-        updatedData = {
-          ...updatedData,
-          course: '',
-          academicYear: '',
-        };
+        updated.course = '';
+        updated.academicYear = '';
       }
     }
 
     if (name === 'faculty') {
-      updatedData.course = '';
+      updated.course = '';
     }
 
-    setFormData(updatedData);
+    setFormData(updated);
   };
 
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    setIsSubmitting(true);
 
     try {
-      let payload = {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-      };
+      setLoading(true);
+      setVerificationToken('');
 
-      if (formData.role === 'student') {
-        payload = {
-          ...payload,
-          faculty: formData.faculty,
-          course: formData.course,
-          academicYear: Number(formData.academicYear),
-        };
-      } else if (formData.role === 'faculty') {
-        payload = {
-          ...payload,
-          faculty: formData.faculty,
-        };
-      }
-
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_BASE}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(data.message || 'Unable to create account');
       }
 
-      setSuccess('Registration successful. Redirecting to login...');
+      setVerificationToken(data.emailVerificationToken || '');
 
-      setTimeout(() => {
-        navigate('/login');
-      }, 1000);
-    } catch (err) {
-      setError(err.message);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          _id: data._id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          faculty: data.faculty || '',
+          course: data.course || '',
+          academicYear: data.academicYear || '',
+          status: data.status || 'active',
+          points: data.points ?? 0,
+          helperBadge: data.helperBadge ?? false,
+          emailVerified: data.emailVerified ?? false,
+          phoneVerified: data.phoneVerified ?? false,
+          avatar: data.avatar || '',
+        })
+      );
+
+      showToast('success', 'Account created successfully. Please verify your email address.');
+    } catch (error) {
+      showToast('error', error.message);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const facultyOptions = Object.keys(faculties);
-  const availableCourses = formData.faculty ? faculties[formData.faculty] : [];
-
   const inputStyle =
-    'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100';
+    'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
 
   return (
-    <div className="app-shell flex items-center justify-center overflow-hidden px-4 py-8 sm:px-6 lg:px-10">
-      <div className="grid w-full max-w-7xl overflow-hidden rounded-[2rem] border border-white/60 bg-white/75 shadow-2xl shadow-slate-200 backdrop-blur-xl lg:grid-cols-[0.85fr_1.15fr]">
-        <section className="bg-gradient-to-br from-blue-700 via-blue-600 to-green-600 px-6 py-8 text-white sm:px-8 lg:px-10 lg:py-12">
-          <div className="max-w-sm">
-            <p className="inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/90">
-              New Account Setup
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-green-50 px-4 py-10">
+      <Toast show={toast.show} type={toast.type} message={toast.message} onClose={closeToast} />
+
+      <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-2xl lg:grid lg:grid-cols-2">
+        <div className="hidden bg-gradient-to-br from-blue-700 via-blue-600 to-green-600 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-100">
+              New Account Registration
             </p>
-            <h1 className="mt-6 text-4xl font-bold leading-tight">
-              Join UniHive with a polished registration flow.
+            <h1 className="mt-4 text-5xl font-bold leading-tight">
+              Create your UniHive account through a structured academic registration process.
             </h1>
-            <p className="mt-4 text-base leading-7 text-blue-50">
-              Register students, faculty members, or admins with a cleaner form, better field hierarchy, and a professional academic look.
+            <p className="mt-6 text-base leading-8 text-blue-50">
+              Register as a student, faculty member, or administrator using a role-based workflow
+              designed for consistent academic identity management.
             </p>
+          </div>
 
-            <div className="mt-8 space-y-4">
-              {[
-                'Role-based account creation',
-                'Dynamic form fields by user role',
-                'Structured registration experience',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl bg-white/14 px-4 py-3 text-sm font-medium text-white/95 ring-1 ring-white/20"
-                >
-                  {item}
-                </div>
-              ))}
+          <div className="grid gap-4">
+            <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+              Role-based academic registration
+            </div>
+            <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+              Structured faculty, course, and year selection
+            </div>
+            <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+              Integrated verification and account security
             </div>
           </div>
-        </section>
+        </div>
 
-        <section className="px-6 py-8 sm:px-8 lg:px-12 lg:py-12">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="p-6 sm:p-10">
+          <Link to="/" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
+            ← Back to Home
+          </Link>
+
+          <h2 className="mt-6 text-3xl font-bold text-slate-900">Create Your UniHive Account</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            Complete the registration form below to create your academic account and gain access to the platform.
+          </p>
+
+          <div className="mt-5 inline-flex rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
+            Role-based registration workflow
+          </div>
+
+          <form onSubmit={handleRegister} className="mt-8 grid gap-5">
             <div>
-              <Link to="/" className="text-sm font-semibold text-blue-700 transition hover:text-blue-800">
-                ← Back to Home
-              </Link>
-              <h2 className="mt-4 text-3xl font-bold text-slate-900">Create Account</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Complete the form below to register for the platform.
-              </p>
-            </div>
-            <div className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-              Dynamic registration based on role
-            </div>
-          </div>
-
-          {error && (
-            <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-5 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-              {success}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-slate-700">Full Name</label>
               <input
                 type="text"
                 name="name"
-                placeholder="Enter full name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                disabled={isSubmitting}
                 className={inputStyle}
+                placeholder="Enter your full name"
               />
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className={inputStyle}
+                  placeholder="Enter your email address"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className={inputStyle}
+                  placeholder="Create a secure password"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
-              <input
-                type="email"
-                name="email"
-                placeholder="Enter email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={isSubmitting}
-                className={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Password</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="Create password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                disabled={isSubmitting}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-              />
-            </div>
-
-            <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-slate-700">Role</label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                required
-                disabled={isSubmitting}
-                className={inputStyle}
-              >
+              <select name="role" value={formData.role} onChange={handleChange} className={inputStyle}>
                 <option value="student">Student</option>
-                <option value="faculty">Faculty Member</option>
-                <option value="admin">Admin</option>
+                <option value="faculty">Faculty</option>
+                <option value="admin">Administrator</option>
               </select>
             </div>
 
-            {formData.role === 'student' && (
-              <>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">Academic Year</label>
-                  <select
-                    name="academicYear"
-                    value={formData.academicYear}
-                    onChange={handleChange}
-                    required
-                    disabled={isSubmitting}
-                    className={inputStyle}
-                  >
-                    <option value="" disabled>
-                      Select academic year
-                    </option>
-                    {[1, 2, 3, 4].map((year) => (
-                      <option key={year} value={year}>
-                        Year {year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+            {formData.role !== 'admin' && (
+              <div className={formData.role === 'student' ? 'grid gap-5 md:grid-cols-2' : 'grid gap-5'}>
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">Faculty</label>
                   <select
                     name="faculty"
                     value={formData.faculty}
                     onChange={handleChange}
-                    required
-                    disabled={isSubmitting}
                     className={inputStyle}
+                    required={formData.role !== 'admin'}
                   >
-                    <option value="" disabled>
-                      Select faculty
-                    </option>
+                    <option value="">Select faculty</option>
                     {facultyOptions.map((faculty) => (
                       <option key={faculty} value={faculty}>
                         {faculty}
@@ -269,72 +250,91 @@ const Register = () => {
                   </select>
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">Course</label>
-                  <select
-                    name="course"
-                    value={formData.course}
-                    onChange={handleChange}
-                    required
-                    disabled={!formData.faculty || isSubmitting}
-                    className={`${inputStyle} ${
-                      !formData.faculty || isSubmitting ? 'text-slate-400' : ''
-                    }`}
-                  >
-                    <option value="" disabled>
-                      {formData.faculty ? 'Select course' : 'Select faculty first'}
-                    </option>
-                    {availableCourses.map((course) => (
-                      <option key={course} value={course}>
-                        {course}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
+                {formData.role === 'student' && (
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Academic Year</label>
+                    <select
+                      name="academicYear"
+                      value={formData.academicYear}
+                      onChange={handleChange}
+                      className={inputStyle}
+                      required={formData.role === 'student'}
+                    >
+                      <option value="">Select academic year</option>
+                      {academicYearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          Year {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             )}
 
-            {formData.role === 'faculty' && (
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Faculty</label>
+            {formData.role === 'student' && (
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Course</label>
                 <select
-                  name="faculty"
-                  value={formData.faculty}
+                  name="course"
+                  value={formData.course}
                   onChange={handleChange}
-                  required
-                  disabled={isSubmitting}
                   className={inputStyle}
+                  required={formData.role === 'student'}
+                  disabled={!formData.faculty}
                 >
-                  <option value="" disabled>
-                    Select faculty
+                  <option value="">
+                    {formData.faculty ? 'Select course' : 'Select faculty first'}
                   </option>
-                  {facultyOptions.map((faculty) => (
-                    <option key={faculty} value={faculty}>
-                      {faculty}
+                  {availableCourses.map((course) => (
+                    <option key={course} value={course}>
+                      {course}
                     </option>
                   ))}
                 </select>
               </div>
             )}
 
-            <div className="md:col-span-2 mt-2">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-2xl bg-green-600 px-5 py-3.5 text-base font-semibold text-white shadow-lg shadow-green-100 transition hover:-translate-y-0.5 hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSubmitting ? 'Registering...' : 'Register Account'}
-              </button>
-            </div>
+            {formData.role === 'admin' && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-700">Administrator account configuration</p>
+                <p className="mt-2">
+                  Administrator accounts do not require faculty, course, or academic year details during registration.
+                </p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-2xl bg-green-600 px-5 py-3.5 text-base font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading ? 'Creating Account...' : 'Register Account'}
+            </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
-            Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-blue-700 hover:text-blue-800">
+          {verificationToken && (
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-800">Verification Token for Development Testing</p>
+              <p className="mt-2 break-all text-sm text-slate-700">{verificationToken}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  onClick={() => navigate('/verify-email')}
+                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
+                >
+                  Proceed to Email Verification
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 text-center">
+            <span className="text-sm text-slate-500">Already have an account? </span>
+            <Link to="/login" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
               Sign in here
             </Link>
-          </p>
-        </section>
+          </div>
+        </div>
       </div>
     </div>
   );

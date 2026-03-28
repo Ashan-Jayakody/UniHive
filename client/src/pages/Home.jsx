@@ -1,157 +1,214 @@
 import { Link } from 'react-router-dom';
 
+const highlights = [
+  {
+    title: 'Role-Based Access',
+    description:
+      'Support structured access for students, faculty members, and administrators through a secure academic platform.',
+    icon: '🎓',
+  },
+  {
+    title: 'Real-Time Notifications',
+    description:
+      'Keep users informed with immediate updates for discussion replies, account activity, and institutional alerts.',
+    icon: '🔔',
+  },
+  {
+    title: 'Academic Communication',
+    description:
+      'Encourage meaningful collaboration through organised discussions, replies, and structured knowledge exchange.',
+    icon: '💬',
+  },
+  {
+    title: 'Administrative Oversight',
+    description:
+      'Provide institutional visibility through user administration, analytics, and exportable reporting tools.',
+    icon: '📊',
+  },
+];
+
+const modules = [
+  {
+    title: 'Profile Management',
+    description:
+      'Maintain academic identity, update account details, manage profile images, and review saved activity records.',
+    icon: '👤',
+  },
+  {
+    title: 'Discussion Workspace',
+    description:
+      'Create structured academic discussions, participate in topic-based conversations, and organise community responses.',
+    icon: '📝',
+  },
+  {
+    title: 'Notification Centre',
+    description:
+      'Track live platform alerts, review account updates, and manage important communication efficiently.',
+    icon: '📨',
+  },
+  {
+    title: 'Administrative Tools',
+    description:
+      'Monitor users, review analytics, manage operational records, and support institutional control.',
+    icon: '🛠️',
+  },
+];
+
+const quickLinks = [
+  { label: 'Dashboard Ready', icon: '📁' },
+  { label: 'Secure Authentication', icon: '🔐' },
+  { label: 'Live Collaboration', icon: '⚡' },
+];
+
 const Home = () => {
   return (
-    <div className="app-shell overflow-hidden px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <section className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-700">
-            UniHive Platform
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-emerald-50 px-4 py-6 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <nav className="rounded-[2rem] border border-white/70 bg-white/80 px-5 py-4 shadow-xl shadow-slate-200/60 backdrop-blur-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-700">
+            UniHive
           </p>
-
-          <h1 className="mt-4 text-5xl font-bold leading-[1.1] text-slate-950 sm:text-6xl">
-            Welcome to <span className="text-blue-600">UniHive</span>, a cleaner and more
-            professional space for campus users.
+          <h1 className="mt-1 text-xl font-bold text-slate-900">
+            Academic Collaboration Platform
           </h1>
+        </nav>
 
-          <p className="mt-8 max-w-2xl text-lg leading-9 text-slate-600">
-            A collaborative academic platform where students, faculty members, and
-            administrators can access role-based tools through a secure and organized
-            user management experience.
-          </p>
+        <section className="overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/85 shadow-2xl shadow-slate-200/70 backdrop-blur-sm">
+          <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="p-8 sm:p-10 lg:p-12">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-700">
+                UniHive Platform
+              </p>
 
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Link
-              to="/register"
-              className="rounded-2xl bg-blue-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-700"
-            >
-              Start with Registration
-            </Link>
+              <h2 className="mt-4 max-w-3xl text-4xl font-bold leading-tight text-slate-900 sm:text-5xl lg:text-6xl">
+                A modern academic platform for communication, collaboration, and institutional efficiency.
+              </h2>
 
-            <Link
-              to="/login"
-              className="rounded-2xl border border-slate-200 bg-white px-8 py-4 text-base font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50"
-            >
-              Login to Dashboard
-            </Link>
-          </div>
+              <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+                UniHive provides a professional digital environment where students, faculty members,
+                and administrators can communicate effectively, manage academic interactions, receive
+                real-time updates, and support a stronger university experience.
+              </p>
 
-          <div className="mt-16 grid gap-8 sm:grid-cols-3">
-            {[
-              {
-                title: 'Smart peer connection',
-                text: 'Bring students, mentors, and faculty into one smooth academic support system.',
-              },
-              {
-                title: 'Trusted campus community',
-                text: 'Maintain a safer and more organized environment for collaboration and user access.',
-              },
-              {
-                title: 'Structured user flow',
-                text: 'Provide clear onboarding and access paths for students, faculty, and admins.',
-              },
-            ].map((item) => (
-              <div key={item.title}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-                  <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-green-500" />
-                </div>
-                <h3 className="text-2xl font-semibold text-slate-900">{item.title}</h3>
-                <p className="mt-3 text-base leading-8 text-slate-600">{item.text}</p>
-              </div>
-            ))}
-          </div>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  to="/register"
+                  className="rounded-2xl bg-blue-600 px-6 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                  Get Started
+                </Link>
 
-          <div className="mt-16 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-3xl">
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-green-700">
-                  Special Feature
-                </p>
-                <h2 className="mt-3 text-3xl font-bold text-slate-950">
-                  Academic Communication Hub
-                </h2>
-                <p className="mt-3 text-base leading-8 text-slate-600">
-                  Support meaningful academic interaction through structured discussion
-                  threads, topic-based communication spaces, nested replies, and
-                  searchable conversations across the platform.
-                </p>
+                <Link
+                  to="/login"
+                  className="rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
+                >
+                  Access Platform
+                </Link>
               </div>
 
-              <Link
-                to="/communication"
-                className="rounded-2xl bg-green-600 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-green-100 transition hover:-translate-y-0.5 hover:bg-green-700"
-              >
-                Open Communication Hub
-              </Link>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {quickLinks.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm"
+                  >
+                    <span className="mr-2">{item.icon}</span>
+                    {item.label}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                'Thread-based academic discussions',
-                'Topic-specific communication spaces',
-                'Nested replies for structured interaction',
-                'Search and filter across discussions',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl bg-slate-50 px-4 py-4 text-sm font-medium text-slate-700 ring-1 ring-slate-100"
-                >
-                  {item}
+            <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-600 p-8 text-white sm:p-10 lg:p-12">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-100">
+                Platform Value
+              </p>
+
+              <div className="mt-6 space-y-4">
+                <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition hover:bg-white/15">
+                  <h3 className="text-lg font-semibold">Centralised academic engagement</h3>
+                  <p className="mt-2 text-sm leading-7 text-blue-50">
+                    Bring communication, notifications, profiles, and discussion activity into one unified institutional platform.
+                  </p>
                 </div>
-              ))}
+
+                <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition hover:bg-white/15">
+                  <h3 className="text-lg font-semibold">Practical university use</h3>
+                  <p className="mt-2 text-sm leading-7 text-blue-50">
+                    Support meaningful collaboration, academic visibility, and efficient management through features aligned with real campus needs.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition hover:bg-white/15">
+                  <h3 className="text-lg font-semibold">Professional user experience</h3>
+                  <p className="mt-2 text-sm leading-7 text-blue-50">
+                    Present a clean, modern, and structured interface suitable for institutional environments and project demonstration.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 rounded-[2rem] border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-100">
+                  Designed For
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white">
+                    Students
+                  </span>
+                  <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white">
+                    Faculty
+                  </span>
+                  <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white">
+                    Administrators
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="lg:justify-self-end">
-          <div className="overflow-hidden rounded-[2.5rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-300/30 ring-1 ring-slate-800/40 sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Core Module</p>
-                <h2 className="mt-2 text-4xl font-bold text-white">User Management Portal</h2>
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {highlights.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-[1.75rem] border border-white/70 bg-white/85 p-6 shadow-xl shadow-slate-200/70 backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-2xl"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-emerald-50 text-2xl shadow-sm">
+                {item.icon}
               </div>
-
-              <span className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-green-300">
-                Active
-              </span>
+              <h3 className="mt-4 text-lg font-bold text-slate-900">{item.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
             </div>
+          ))}
+        </section>
 
-            <div className="mt-6 rounded-[2rem] border border-white/5 bg-white/5 p-6">
-              <p className="text-sm font-medium text-slate-300">Module overview</p>
-              <p className="mt-3 text-2xl font-semibold leading-10 text-white">
-                Manage user accounts, review roles, and maintain organized access control
-                across the platform.
-              </p>
+        <section className="rounded-[2.25rem] border border-white/70 bg-white/85 p-8 shadow-2xl shadow-slate-200/70 backdrop-blur-sm sm:p-10">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-700">
+              Core Modules
+            </p>
+            <h2 className="mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">
+              Powerful features that support the complete UniHive experience
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+              UniHive is built around practical academic functions that strengthen communication,
+              profile management, alert handling, and institutional oversight within one integrated system.
+            </p>
+          </div>
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <span className="rounded-full bg-blue-500/15 px-4 py-2 text-sm font-medium text-blue-200 ring-1 ring-blue-400/20">
-                  Role-based access
-                </span>
-                <span className="rounded-full bg-green-500/15 px-4 py-2 text-sm font-medium text-green-200 ring-1 ring-green-400/20">
-                  Account management
-                </span>
-                <span className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-slate-200 ring-1 ring-white/10">
-                  Secure user records
-                </span>
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            {modules.map((item) => (
+              <div
+                key={item.title}
+                className="group rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+                  {item.icon}
+                </div>
+                <h3 className="mt-4 text-xl font-bold text-slate-900">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
               </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[1.75rem] bg-white p-5 text-slate-900">
-                <p className="text-sm font-medium text-slate-500">Primary focus</p>
-                <p className="mt-3 text-xl font-semibold leading-8">
-                  Centralized user account administration for students, faculty, and admins.
-                </p>
-              </div>
-
-              <div className="rounded-[1.75rem] bg-white/5 p-5 ring-1 ring-white/5">
-                <p className="text-sm font-medium text-slate-300">Administrative value</p>
-                <p className="mt-3 text-xl font-semibold leading-8 text-white">
-                  Support efficient platform control through structured user records and
-                  access visibility.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
       </div>

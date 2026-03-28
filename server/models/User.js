@@ -5,75 +5,99 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, 'Name is required'],
       trim: true,
     },
+
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       unique: true,
       trim: true,
       lowercase: true,
     },
+
     password: {
       type: String,
-      required: true,
+      required: [true, 'Password is required'],
+      minlength: 6,
     },
+
     role: {
       type: String,
       enum: ['student', 'faculty', 'admin'],
+      required: [true, 'Role is required'],
       default: 'student',
     },
+
     faculty: {
       type: String,
       default: '',
+      trim: true,
     },
+
     course: {
       type: String,
       default: '',
+      trim: true,
     },
+
     academicYear: {
       type: Number,
       default: null,
     },
+
     status: {
       type: String,
       enum: ['active', 'deactivated', 'suspended', 'banned'],
       default: 'active',
     },
+
     points: {
       type: Number,
       default: 0,
     },
+
     helperBadge: {
       type: Boolean,
       default: false,
     },
-    profilePhoto: {
-      type: String,
-      default: '',
-    },
-    phone: {
-      type: String,
-      default: '',
-    },
+
     emailVerified: {
       type: Boolean,
       default: false,
     },
+
     phoneVerified: {
       type: Boolean,
       default: false,
     },
-    loginHistory: [
+
+    avatar: {
+      type: String,
+      default: '',
+    },
+
+    savedThreads: [
       {
-        loginAt: { type: Date, default: Date.now },
-        device: { type: String, default: 'Unknown device' },
-        ipAddress: { type: String, default: '' },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Thread',
       },
     ],
+
+    resetPasswordToken: {
+      type: String,
+      default: '',
+    },
+
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 userSchema.pre('save', async function () {
@@ -84,7 +108,7 @@ userSchema.pre('save', async function () {
 });
 
 userSchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);

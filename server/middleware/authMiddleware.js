@@ -13,8 +13,19 @@ exports.protect = async (req, res, next) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
 
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      if (user.status && user.status !== 'active') {
+        return res.status(403).json({
+          message: `Access blocked. Your account status is ${user.status}.`,
+        });
+      }
+
+      req.user = user;
       return next();
     } catch (error) {
       return res.status(401).json({ message: 'Not authorized, token failed' });
