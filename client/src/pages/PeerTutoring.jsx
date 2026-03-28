@@ -4,6 +4,119 @@ import { Calendar, Clock, Users, Link as LinkIcon, Plus, CheckCircle, XCircle, A
 
 const API_BASE = 'http://localhost:5001/api/sessions';
 
+const StarRating = ({ rating, setRating, interactive = false }) => (
+  <div className="flex gap-1.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        type="button"
+        disabled={!interactive}
+        onClick={() => setRating && setRating(star)}
+        className={`${interactive ? 'cursor-pointer hover:scale-110' : ''} transition-transform`}
+      >
+        <svg
+          className={`h-5 w-5 ${star <= rating ? 'text-amber-400' : 'text-slate-200'}`}
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      </button>
+    ))}
+  </div>
+);
+
+// Reusable session form (shared between Create and Edit modals)
+const SessionForm = ({ onSubmit, submitLabel, onCancel, formData, handleInputChange, formErrors }) => (
+  <form onSubmit={onSubmit} className="p-6 space-y-4">
+    <div>
+      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Topic</label>
+      <input 
+        name="topic" value={formData.topic} onChange={handleInputChange}
+        placeholder="e.g. Advanced Calculus Review"
+        className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+          formErrors.topic ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+        }`}
+      />
+      {formErrors.topic && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.topic}</p>}
+    </div>
+    <div>
+      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Description</label>
+      <textarea 
+        name="description" value={formData.description} onChange={handleInputChange}
+        placeholder="Describe what will be covered..."
+        rows="3"
+        className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+          formErrors.description ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+        }`}
+      />
+      {formErrors.description && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.description}</p>}
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Date</label>
+        <input 
+          type="date" name="date" value={formData.date} onChange={handleInputChange}
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+            formErrors.date ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+          }`}
+        />
+        {formErrors.date && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.date}</p>}
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Time</label>
+        <input 
+          type="time" name="time" value={formData.time} onChange={handleInputChange}
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+            formErrors.time ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+          }`}
+        />
+        {formErrors.time && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.time}</p>}
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Capacity</label>
+        <input 
+          type="number" name="capacity" value={formData.capacity} onChange={handleInputChange}
+          placeholder="Max students"
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+            formErrors.capacity ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+          }`}
+        />
+        {formErrors.capacity && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.capacity}</p>}
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Meeting Link</label>
+        <input 
+          name="meetingLink" value={formData.meetingLink} onChange={handleInputChange}
+          placeholder="Zoom / Meet link"
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
+            formErrors.meetingLink ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
+          }`}
+        />
+        {formErrors.meetingLink && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.meetingLink}</p>}
+      </div>
+    </div>
+
+    <div className="pt-4 flex gap-3">
+      <button 
+        type="button" onClick={onCancel}
+        className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
+      >
+        Cancel
+      </button>
+      <button 
+        type="submit"
+        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-200 transition active:scale-95"
+      >
+        {submitLabel}
+      </button>
+    </div>
+  </form>
+);
+
+
 const PeerTutoring = () => {
   const location = useLocation();
   const [sessions, setSessions] = useState([]);
@@ -314,118 +427,6 @@ const PeerTutoring = () => {
 
   const isEnrolled = (sessionId) => myEnrollments.some(e => e.session._id === sessionId);
 
-  const StarRating = ({ rating, setRating, interactive = false }) => (
-    <div className="flex gap-1.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          disabled={!interactive}
-          onClick={() => setRating && setRating(star)}
-          className={`${interactive ? 'cursor-pointer hover:scale-110' : ''} transition-transform`}
-        >
-          <svg
-            className={`h-5 w-5 ${star <= rating ? 'text-amber-400' : 'text-slate-200'}`}
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        </button>
-      ))}
-    </div>
-  );
-
-  // Reusable session form (shared between Create and Edit modals)
-  const SessionForm = ({ onSubmit, submitLabel, onCancel }) => (
-    <form onSubmit={onSubmit} className="p-6 space-y-4">
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Topic</label>
-        <input 
-          name="topic" value={formData.topic} onChange={handleInputChange}
-          placeholder="e.g. Advanced Calculus Review"
-          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-            formErrors.topic ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-          }`}
-        />
-        {formErrors.topic && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.topic}</p>}
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Description</label>
-        <textarea 
-          name="description" value={formData.description} onChange={handleInputChange}
-          placeholder="Describe what will be covered..."
-          rows="3"
-          className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-            formErrors.description ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-          }`}
-        />
-        {formErrors.description && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.description}</p>}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Date</label>
-          <input 
-            type="date" name="date" value={formData.date} onChange={handleInputChange}
-            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-              formErrors.date ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-            }`}
-          />
-          {formErrors.date && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.date}</p>}
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Time</label>
-          <input 
-            type="time" name="time" value={formData.time} onChange={handleInputChange}
-            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-              formErrors.time ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-            }`}
-          />
-          {formErrors.time && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.time}</p>}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Capacity</label>
-          <input 
-            type="number" name="capacity" value={formData.capacity} onChange={handleInputChange}
-            placeholder="Max students"
-            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-              formErrors.capacity ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-            }`}
-          />
-          {formErrors.capacity && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.capacity}</p>}
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Meeting Link</label>
-          <input 
-            name="meetingLink" value={formData.meetingLink} onChange={handleInputChange}
-            placeholder="Zoom / Meet link"
-            className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition ${
-              formErrors.meetingLink ? 'border-red-500 bg-red-50 focus:ring-red-500/10' : 'bg-slate-50 border-slate-200 focus:bg-white focus:ring-indigo-500/20'
-            }`}
-          />
-          {formErrors.meetingLink && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{formErrors.meetingLink}</p>}
-        </div>
-      </div>
-
-      <div className="pt-4 flex gap-3">
-        <button 
-          type="button" onClick={onCancel}
-          className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
-        >
-          Cancel
-        </button>
-        <button 
-          type="submit"
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-200 transition active:scale-95"
-        >
-          {submitLabel}
-        </button>
-      </div>
-    </form>
-  );
-
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -649,6 +650,9 @@ const PeerTutoring = () => {
               onSubmit={handleCreateSession} 
               submitLabel="Create Session" 
               onCancel={() => setShowCreateModal(false)} 
+              formData={formData}
+              handleInputChange={handleInputChange}
+              formErrors={formErrors}
             />
           </div>
         </div>
@@ -666,6 +670,9 @@ const PeerTutoring = () => {
               onSubmit={handleUpdateSession} 
               submitLabel="Update Session" 
               onCancel={() => { setShowEditModal(false); setEditingSessionId(null); }} 
+              formData={formData}
+              handleInputChange={handleInputChange}
+              formErrors={formErrors}
             />
           </div>
         </div>
