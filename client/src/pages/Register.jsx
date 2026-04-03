@@ -313,20 +313,7 @@ const Register = () => {
             </button>
           </form>
 
-          {verificationToken && (
-            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-800">Verification Token for Development Testing</p>
-              <p className="mt-2 break-all text-sm text-slate-700">{verificationToken}</p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  onClick={() => navigate('/verify-email')}
-                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
-                >
-                  Proceed to Email Verification
-                </button>
-              </div>
-            </div>
-          )}
+          
 
           <div className="mt-6 text-center">
             <span className="text-sm text-slate-500">Already have an account? </span>
