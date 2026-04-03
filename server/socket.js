@@ -1,42 +1,59 @@
-const socketSetup = io  => {
-    io.on('connection', (socket) => {
-        console.log('User connected:', socket.id);
+let ioInstance = null;
 
-        // join a private room for a specific help request
-        socket.on('join-room', ({roomId, userId, userName}) =>{
-            socket.join(`request-${roomId}`);
-            console.log(`${userName} joined room: request-${roomId}`);
+// initialize socket
+const initSocket = (io) => {
+  ioInstance = io;
 
-            // notify others in the room that a new user has joined
-            socket.to(`request-${roomId}`).emit('User joined', {
-                userId,
-                userName
-            });
-        });
+  io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
 
-        // handle incoming messages
-        socket.on('send-message', ({roomId, message, sender}) => {
-            socket.to(`request-${roomId}`).emit('receive-message', {
-                message,
-                sender,
-                createdAt: new Date()
-            });
-        });
+    // join room
+    socket.on('join-room', ({ roomId, userId, userName }) => {
+      socket.join(`request-${roomId}`);
+      console.log(`${userName} joined room: request-${roomId}`);
 
-        // user leaves the room
-        socket.on('leave-room', ({roomId, userName}) => {
-            socket.leave(`request-${roomId}`);
-            socket.to(`request-${roomId}`).emit('User left', {
-                userName
-            });
-            console.log(`${userName} left room: request-${roomId}`);
-        });
-
-        // handle disconnection
-        socket.on('disconnect', () => {
-            console.log('User disconnected:', socket.id);
-        }); 
+      socket.to(`request-${roomId}`).emit('user-joined', {
+        userId,
+        userName
+      });
     });
+
+    // send message
+    socket.on('send-message', ({ roomId, message, sender }) => {
+      socket.to(`request-${roomId}`).emit('receive-message', {
+        message,
+        sender,
+        createdAt: new Date()
+      });
+    });
+
+    // leave room
+    socket.on('leave-room', ({ roomId, userName }) => {
+      socket.leave(`request-${roomId}`);
+
+      socket.to(`request-${roomId}`).emit('user-left', {
+        userName
+      });
+
+      console.log(`${userName} left room: request-${roomId}`);
+    });
+
+    // disconnect
+    socket.on('disconnect', () => {
+      console.log('User disconnected:', socket.id);
+    });
+  });
 };
 
-module.exports = socketSetup;
+// access io anywhere
+const getIO = () => {
+  if (!ioInstance) {
+    throw new Error('Socket.io has not been initialized');
+  }
+  return ioInstance;
+};
+
+module.exports = {
+  initSocket,
+  getIO,
+};

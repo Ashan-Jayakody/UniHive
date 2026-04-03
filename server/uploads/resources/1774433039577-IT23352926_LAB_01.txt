@@ -1,0 +1,118 @@
+1. CREATE TABLE STRUCTURES
+
+CREATE TABLE client (
+    clno CHAR(3) PRIMARY KEY,
+    name VARCHAR(12),
+    address VARCHAR(30)
+);
+
+CREATE TABLE stock (
+    company CHAR(7) PRIMARY KEY,
+    price REAL,
+    dividend REAL,
+    eps REAL
+);
+
+CREATE TABLE trading (
+    company CHAR(7),
+    exchange VARCHAR(12),
+    FOREIGN KEY(company) REFERENCES stock(company)
+);
+
+CREATE TABLE purchase (
+    clno CHAR(3),
+    company CHAR(7),
+    pdate DATE,
+    qty INTEGER,
+    price REAL,
+    FOREIGN KEY(clno) REFERENCES client(clno),
+    FOREIGN KEY(company) REFERENCES stock(company)
+);
+
+
+
+
+
+2. INSERT DATA
+
+-- Clients
+INSERT INTO client VALUES ('c01', 'John Smith', '3 East Av, Bentley, WA 6102');
+INSERT INTO client VALUES ('c02', 'Jill Brody', '42 Bent St, Perth, WA 6001');
+
+-- Stocks
+INSERT INTO stock VALUES ('BHP', 10.50, 1.50, 3.20);
+INSERT INTO stock VALUES ('IBM', 70.00, 4.25, 10.00);
+INSERT INTO stock VALUES ('INTEL', 76.50, 5.00, 12.40);
+INSERT INTO stock VALUES ('FORD', 40.00, 2.00, 8.50);
+INSERT INTO stock VALUES ('GM', 60.00, 2.50, 9.20);
+INSERT INTO stock VALUES ('INFOSYS', 45.00, 3.00, 7.80);
+
+-- Trading Exchanges
+INSERT INTO trading VALUES ('BHP', 'Sydney');
+INSERT INTO trading VALUES ('BHP', 'New York');
+INSERT INTO trading VALUES ('IBM', 'New York');
+INSERT INTO trading VALUES ('IBM', 'London');
+INSERT INTO trading VALUES ('IBM', 'Tokyo');
+INSERT INTO trading VALUES ('INTEL', 'New York');
+INSERT INTO trading VALUES ('INTEL', 'London');
+INSERT INTO trading VALUES ('FORD', 'New York');
+INSERT INTO trading VALUES ('GM', 'New York');
+INSERT INTO trading VALUES ('INFOSYS', 'New York');
+
+-- Purchases (John Smith - c01)
+INSERT INTO purchase VALUES ('c01', 'BHP', '2001-10-02', 1000, 12.00);
+INSERT INTO purchase VALUES ('c01', 'BHP', '2002-06-08', 2000, 10.50);
+INSERT INTO purchase VALUES ('c01', 'IBM', '2000-02-12', 500, 58.00);
+INSERT INTO purchase VALUES ('c01', 'IBM', '2001-04-10', 1200, 65.00);
+INSERT INTO purchase VALUES ('c01', 'INFOSYS', '2001-08-11', 1000, 64.00);
+
+-- Purchases (Jill Brody - c02)
+INSERT INTO purchase VALUES ('c02', 'INTEL', '2000-01-30', 300, 35.00);
+INSERT INTO purchase VALUES ('c02', 'INTEL', '2001-01-30', 400, 54.00);
+INSERT INTO purchase VALUES ('c02', 'INTEL', '2001-10-02', 200, 60.00);
+INSERT INTO purchase VALUES ('c02', 'FORD', '1999-10-05', 300, 40.00);
+INSERT INTO purchase VALUES ('c02', 'GM', '2000-12-12', 500, 55.50);
+
+
+
+
+
+
+-- 3.QUERIES(Answer)
+
+-- Query (a): Client's name and investment details
+SELECT c.name, p.company, s.price, s.dividend, s.eps
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+JOIN stock s ON p.company = s.company;
+
+-- Query (b): Total shares and Average Purchase Price per client
+SELECT c.name, p.company, SUM(p.qty) AS Total_Shares, 
+       SUM(p.qty * p.price) / SUM(p.qty) AS Avg_Price
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+GROUP BY c.name, p.company;
+
+-- Query (c): New York traded stocks and current value
+SELECT p.company, c.name, SUM(p.qty) AS Qty_Held, 
+       (SUM(p.qty) * s.price) AS Current_Value
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+JOIN stock s ON p.company = s.company
+JOIN trading t ON s.company = t.company
+WHERE t.exchange = 'New York'
+GROUP BY p.company, c.name;
+
+-- Query (d): Total portfolio cost per client
+SELECT c.name, SUM(p.qty * p.price) AS Total_Cost
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+GROUP BY c.name;
+
+-- Query (e): Book Profit or Loss
+SELECT c.name, 
+       SUM(p.qty * s.price) - SUM(p.qty * p.price) AS Profit_Loss
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+JOIN stock s ON p.company = s.company
+GROUP BY c.name;

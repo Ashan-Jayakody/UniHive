@@ -7,56 +7,54 @@ const { Server } = require('socket.io');
 const socketSetup = require('./socket');
 require('dotenv').config();
 
-
 const app = express();
 const server = http.createServer(app);
 
-//socket IO server
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:3000","http://localhost:5173"], //fontend  
-        methods: ["GET","POST","PUT","DELETE"] ,
+        origin: ["http://localhost:3000", "http://localhost:5173"],
+        methods: ["GET", "POST", "PUT", "DELETE"],
         credentials: true,
     }
 });
 
 app.use((req, res, next) => {
-  req.io=io;
-  next();
+    req.io = io;
+    next();
 });
 
-// Middleware
 app.use(cors({ 
-    origin: ["http://localhost:3000", "http://localhost:5173"] ,
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-// routes
+// Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/threads', require('./routes/threadRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
-
-//
+app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/request', require('./routes/helpRequestRoutes'));
 
+socketSetup(io);
 
-socketSetup(io); //socket setup
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+    res.status(204).end();
+});
 
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB successfully connected');
-
-    const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    .connect(process.env.MONGO_URI)
+    .then(() => {
+        console.log('MongoDB successfully connected');
+        const PORT = process.env.PORT || 5000;
+        server.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    })
+    .catch((err) => {
+        console.log('Failed to connect to the Database:', err.message);
     });
-  })
-  .catch((err) => {
-    console.log('Failed to connect to the Database:', err.message);
-  });
