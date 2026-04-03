@@ -4,6 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
+const path = require('path');
 
 
 const app = express();
@@ -55,9 +56,18 @@ app.use('/api/threads', require('./routes/threadRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
 
+// Resource management routes
+app.use('/api/resources', require('./routes/resourceRoutes'));
+
 // Student help request routes
 app.use('/api/request', require('./routes/helpRequestRoutes'));
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+  res.status(204).end();
+});
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {

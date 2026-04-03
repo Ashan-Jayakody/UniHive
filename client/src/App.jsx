@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResendVerification from "./pages/ResendVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ResourceShare from "./pages/ResourceShare";
 
 const AppLayout = () => (
   <div className="min-h-screen bg-slate-50 ">
@@ -124,6 +125,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/resourceShare"
+            element={
+              <ProtectedRoute>
+                <ResourceShare />
+              </ProtectedRoute>
+            }
+          />
+
+
         </Route>
       </Routes>
     </Router>
