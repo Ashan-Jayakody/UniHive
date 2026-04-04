@@ -6,6 +6,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RequestHelp from "./components/RequestHelp";
 import MyInvitations from "./pages/Myinvitations";
+import MyRequests from "./pages/MyRequests";
+import ChatRoom from "./pages/ChatRoom";
 import HelpBoard from "./pages/HelpBoard";
 import UserManagement from "./pages/UserManagement";
 import AcademicCommunication from "./pages/AcademicCommunication";
@@ -107,6 +109,24 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/myrequests"
+            element={ 
+              <ProtectedRoute>
+                <MyRequests />
+              </ProtectedRoute>
+            }
+          />  
+
+          <Route
+            path="/chat/:id"
+            element={ 
+              <ProtectedRoute>
+                <ChatRoom />
+              </ProtectedRoute>
+            }
+          />  
 
           <Route
             path="/users"
