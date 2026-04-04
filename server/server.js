@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const { initSocket } = require('./socket');
 require('dotenv').config();
 const path = require('path');
 
@@ -17,6 +18,8 @@ const io = new Server(server, {
         methods: ["GET","POST","PUT","DELETE"] 
     }
 });
+
+initSocket(io);
 
 
 io.on('connection', (socket) => {

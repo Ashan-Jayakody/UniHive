@@ -12,7 +12,18 @@ const NOTIFICATION_API = 'http://localhost:5000/api/notifications';
 const getCurrentUser = () => {
   try {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) return JSON.parse(savedUser);
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      return {
+        ...parsed,
+        _id: parsed._id || parsed.id || '',
+        name: parsed.name || 'User',
+        email: parsed.email || '',
+        role: parsed.role || '',
+        status: parsed.status || 'active',
+        avatar: parsed.avatar || '',
+      };
+    }
 
     const token = localStorage.getItem('token');
     if (!token) return null;
@@ -43,6 +54,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
   const navigate   = useNavigate();
   const location   = useLocation();
   const currentUser = getCurrentUser();
+  const currentUserId = currentUser?._id || currentUser?.id || '';
   const isAdmin    = currentUser?.role === 'admin';
 
 
@@ -78,15 +90,24 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
 
  
   useEffect(() => {
-    if (currentUser?._id) {
-      socket.emit('join-user-room', currentUser._id);
-      fetchNotifications();
-    }
-  }, [currentUser?._id, location.pathname]);
+    if (!currentUserId) return;
+
+    const joinUserRoom = () => {
+      socket.emit('join-user-room', currentUserId);
+    };
+
+    joinUserRoom();
+    socket.on('connect', joinUserRoom);
+    fetchNotifications();
+
+    return () => {
+      socket.off('connect', joinUserRoom);
+    };
+  }, [currentUserId, location.pathname]);
 
   // Socket event listeners 
   useEffect(() => {
-    if (!currentUser?._id) return;
+    if (!currentUserId) return;
 
     const onNew = (notification) => {
       setNotifications((prev) => [notification, ...prev]);
@@ -116,7 +137,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
       socket.off('notification:all-read', onAllRead);
       socket.off('notification:deleted', onDeleted);
     };
-  }, [currentUser?._id]);
+  }, [currentUserId]);
 
   // Click outside to close dropdown
   useEffect(() => {

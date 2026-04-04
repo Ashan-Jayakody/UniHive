@@ -30,6 +30,17 @@ const statusBadgeClass = (status) => {
   return "bg-amber-100 text-amber-700 border-amber-200";
 };
 
+const isAllowedNotesFileType = (mimeType = "") => {
+  const value = String(mimeType).toLowerCase().trim();
+  return value === "image/png" || value === "application/pdf";
+};
+
+const isLikelyNotesFileUrl = (url = "") => {
+  const value = String(url).trim().toLowerCase();
+  if (!value) return false;
+  return /\.(png|pdf)(\?.*)?$/i.test(value);
+};
+
 const ResourceShare = () => {
   const user = useMemo(() => getCurrentUser(), []);
   const token = localStorage.getItem("token") || "";
@@ -260,9 +271,78 @@ const ResourceShare = () => {
       return;
     }
 
+    if (
+      uploadForm.category === "Videos" &&
+      uploadForm.file &&
+      !String(uploadForm.file.type || "").toLowerCase().startsWith("video/")
+    ) {
+      setError("For Videos category, only video files are allowed.");
+      return;
+    }
+
+    if (
+      uploadForm.category === "Notes" &&
+      uploadForm.file &&
+      !isAllowedNotesFileType(uploadForm.file.type)
+    ) {
+      setError("For Notes category, only PNG or PDF files are allowed.");
+      return;
+    }
+
+    if (uploadForm.category === "Notes") {
+      const trimmedLinkUrl = uploadForm.linkUrl.trim();
+      const trimmedFileUrl = uploadForm.fileUrl.trim();
+
+      if (trimmedLinkUrl && !isLikelyNotesFileUrl(trimmedLinkUrl)) {
+        setError("For Notes category, link URL must end with .png or .pdf.");
+        return;
+      }
+
+      if (!uploadForm.file && trimmedFileUrl && !isLikelyNotesFileUrl(trimmedFileUrl)) {
+        setError("For Notes category, direct file URL must end with .png or .pdf.");
+        return;
+      }
+    }
+
+    if (
+      uploadForm.category === "Research Papers" &&
+      uploadForm.file &&
+      String(uploadForm.file.type || "").toLowerCase().startsWith("video/")
+    ) {
+      setError("For Research Papers category, video files are not allowed.");
+      return;
+    }
+
+    if (uploadForm.category === "Research Papers") {
+      const trimmedLinkUrl = uploadForm.linkUrl.trim();
+      const trimmedFileUrl = uploadForm.fileUrl.trim();
+
+      if (trimmedLinkUrl && /youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?.*)?$/i.test(trimmedLinkUrl)) {
+        setError("For Research Papers category, video links are not allowed.");
+        return;
+      }
+
+      if (!uploadForm.file && trimmedFileUrl && /youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?.*)?$/i.test(trimmedFileUrl)) {
+        setError("For Research Papers category, video URLs are not allowed.");
+        return;
+      }
+    }
+
     if (!uploadForm.file && !uploadForm.fileUrl.trim() && !uploadForm.linkUrl.trim()) {
       setError("Provide at least one: file upload, fileUrl, or linkUrl.");
       return;
+    }
+
+    if (uploadForm.category === "Links") {
+      if (uploadForm.file || uploadForm.fileUrl.trim()) {
+        setError(`For ${uploadForm.category} category, only Link URL is allowed. File upload/file URL is not allowed.`);
+        return;
+      }
+
+      if (!uploadForm.linkUrl.trim()) {
+        setError(`For ${uploadForm.category} category, Link URL is required.`);
+        return;
+      }
     }
 
     try {
@@ -352,6 +432,52 @@ const ResourceShare = () => {
     const draft = editDrafts[id];
     if (!draft) return;
     resetAlerts();
+
+    if (draft.category === "Links") {
+      const trimmedLinkUrl = String(draft.linkUrl || "").trim();
+      const trimmedFileUrl = String(draft.fileUrl || "").trim();
+
+      if (trimmedFileUrl) {
+        setError(`For ${draft.category} category, file URL is not allowed.`);
+        return;
+      }
+
+      if (!trimmedLinkUrl) {
+        setError(`For ${draft.category} category, Link URL is required.`);
+        return;
+      }
+    }
+
+    if (draft.category === "Notes") {
+      const trimmedLinkUrl = String(draft.linkUrl || "").trim();
+      const trimmedFileUrl = String(draft.fileUrl || "").trim();
+
+      if (trimmedLinkUrl && !isLikelyNotesFileUrl(trimmedLinkUrl)) {
+        setError("For Notes category, link URL must end with .png or .pdf.");
+        return;
+      }
+
+      if (trimmedFileUrl && !isLikelyNotesFileUrl(trimmedFileUrl)) {
+        setError("For Notes category, file URL must end with .png or .pdf.");
+        return;
+      }
+    }
+
+    if (draft.category === "Research Papers") {
+      const trimmedLinkUrl = String(draft.linkUrl || "").trim();
+      const trimmedFileUrl = String(draft.fileUrl || "").trim();
+      const videoPattern = /youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?.*)?$/i;
+
+      if (trimmedLinkUrl && videoPattern.test(trimmedLinkUrl)) {
+        setError("For Research Papers category, video links are not allowed.");
+        return;
+      }
+
+      if (trimmedFileUrl && videoPattern.test(trimmedFileUrl)) {
+        setError("For Research Papers category, video URLs are not allowed.");
+        return;
+      }
+    }
 
     try {
       setActionLoadingId("edit-" + id);
@@ -697,6 +823,7 @@ const ResourceShare = () => {
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 placeholder="Direct fileUrl (optional)"
                 value={uploadForm.fileUrl}
+                disabled={uploadForm.category === "Links"}
                 onChange={(e) => setUploadForm((p) => ({ ...p, fileUrl: e.target.value }))}
               />
             </div>
@@ -710,7 +837,19 @@ const ResourceShare = () => {
             />
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <input type="file" onChange={(e) => setUploadForm((p) => ({ ...p, file: e.target.files?.[0] || null }))} />
+              {uploadForm.category === "Notes" || uploadForm.category === "Research Papers" || uploadForm.category === "Videos" ? (
+                <input
+                 type="file"
+                 accept={
+                   uploadForm.category === "Videos"
+                     ? "video/*"
+                     : uploadForm.category === "Notes"
+                     ? ".png,.pdf,image/png,application/pdf"
+                     : ".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/rtf"
+                 }
+                 onChange={(e) => setUploadForm((p) => ({ ...p, file: e.target.files?.[0] || null }))}
+               />
+              ) : null}
 
               <button
                 type="submit"
