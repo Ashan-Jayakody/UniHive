@@ -4,7 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const socketSetup = require('./socket');
+const {initSocket} = require('./socket');
 require('dotenv').config();
 
 const app = express();
@@ -40,7 +40,7 @@ app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/request', require('./routes/helpRequestRoutes'));
 
-socketSetup(io);
+initSocket(io);
 
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
     res.status(204).end();
