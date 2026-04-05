@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
 const API_BASE = 'http://localhost:5000/api/auth';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -37,17 +38,43 @@ const Login = () => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: name === 'email' ? value.trimStart() : value,
     }));
+  };
+
+  const validateLoginForm = () => {
+    const email = formData.email.trim();
+    const password = formData.password;
+
+    if (!email && !password) {
+      return 'Please enter your email address and password.';
+    }
+
+    if (!email) {
+      return 'Email address is required.';
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (!password.trim()) {
+      return 'Password is required.';
+    }
+
+    return null;
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!formData.email.trim() || !formData.password.trim()) {
-      showToast('error', 'Please enter both email and password.');
+    const validationError = validateLoginForm();
+    if (validationError) {
+      showToast('error', validationError);
       return;
     }
 
@@ -60,7 +87,7 @@ const Login = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
         }),
       });
@@ -187,7 +214,7 @@ const Login = () => {
               platform.
             </p>
 
-            <form onSubmit={handleLogin} className="mt-8 grid gap-5">
+            <form onSubmit={handleLogin} className="mt-8 grid gap-5" noValidate>
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Email Address
