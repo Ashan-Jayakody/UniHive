@@ -90,7 +90,7 @@ const markNotificationAsRead = async (req, res) => {
     await notification.save();
 
     emitToUser(req.user._id, 'notification:updated', {
-      _id: notification._id,
+      _id: String(notification._id),
       read: true,
     });
 
