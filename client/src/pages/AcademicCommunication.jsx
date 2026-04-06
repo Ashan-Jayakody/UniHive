@@ -766,14 +766,17 @@ const AcademicCommunication = () => {
         </div>
 
         <PanelCard eyebrow="Discussion Controls" title="Search, Filter, and Create Discussions">
-          <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-            <form onSubmit={handleSearchSubmit} className="grid gap-4 md:grid-cols-[1fr_180px_180px_auto]">
+          <div className="grid gap-5 xl:grid-cols-[1.5fr_0.75fr]">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_150px_150px_110px]"
+            >
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search discussions by title, topic, content, or author"
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                placeholder="Search discussions..."
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
 
               <select
@@ -782,7 +785,7 @@ const AcademicCommunication = () => {
                   setSelectedTopic(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
                 {topicOptions.map((topic) => (
                   <option key={topic} value={topic}>
@@ -797,37 +800,37 @@ const AcademicCommunication = () => {
                   setSortBy(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
                 <option value="latest">Latest</option>
                 <option value="oldest">Oldest</option>
-                <option value="latest-activity">Latest Activity</option>
-                <option value="most-replies">Most Replies</option>
+                <option value="latest-activity">Activity</option>
+                <option value="most-replies">Replies</option>
               </select>
 
               <button
                 type="submit"
-                className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="h-12 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
                 Apply
               </button>
             </form>
 
-            <div className="flex flex-col justify-between rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Discussion Publishing
-                </p>
-                <h3 className="mt-2 text-xl font-bold text-slate-900">Start a New Academic Discussion</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Publish a structured topic, ask a question, or share an academic update to begin a new thread.
-                </p>
-              </div>
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Discussion Publishing
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                Start a New Academic Discussion
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Publish a structured topic or ask a question.
+              </p>
 
               <button
                 type="button"
                 onClick={() => setShowCreateForm((prev) => !prev)}
-                className="mt-5 rounded-2xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
+                className="mt-4 h-11 rounded-2xl bg-green-600 px-5 text-sm font-semibold text-white transition hover:bg-green-700"
               >
                 {showCreateForm ? 'Close Form' : 'Create Discussion'}
               </button>
@@ -837,9 +840,9 @@ const AcademicCommunication = () => {
           {showCreateForm && (
             <form
               onSubmit={handleCreateThread}
-              className="mt-6 grid gap-4 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm"
+              className="mt-5 grid gap-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm"
             >
-              <div className="grid gap-4 md:grid-cols-[1fr_220px]">
+              <div className="grid gap-4 md:grid-cols-[1fr_180px]">
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">Discussion Title</label>
                   <input
@@ -847,8 +850,8 @@ const AcademicCommunication = () => {
                     maxLength={THREAD_TITLE_MAX}
                     value={newThread.title}
                     onChange={handleNewThreadChange}
-                    placeholder="Enter a clear academic discussion title"
-                    className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    placeholder="Enter a clear discussion title"
+                    className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                       threadErrors.title
                         ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                         : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -865,7 +868,7 @@ const AcademicCommunication = () => {
                     name="topic"
                     value={newThread.topic}
                     onChange={handleNewThreadChange}
-                    className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                       threadErrors.topic
                         ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                         : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -892,9 +895,9 @@ const AcademicCommunication = () => {
                   maxLength={THREAD_CONTENT_MAX}
                   value={newThread.content}
                   onChange={handleNewThreadChange}
-                  rows="6"
+                  rows="5"
                   placeholder="Write the discussion content here"
-                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                     threadErrors.content
                       ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                       : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -909,7 +912,7 @@ const AcademicCommunication = () => {
                 <button
                   type="submit"
                   disabled={postingThread}
-                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="h-11 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {postingThread ? 'Publishing...' : 'Publish Discussion'}
                 </button>
@@ -932,11 +935,11 @@ const AcademicCommunication = () => {
               {threads.map((thread) => (
                 <div
                   key={thread._id}
-                  className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm"
+                  className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm"
                 >
                   {editingThreadId === thread._id ? (
                     <div className="grid gap-4">
-                      <div className="grid gap-4 md:grid-cols-[1fr_220px]">
+                      <div className="grid gap-4 md:grid-cols-[1fr_180px]">
                         <div>
                           <label className="mb-2 block text-sm font-semibold text-slate-700">
                             Discussion Title
@@ -946,7 +949,7 @@ const AcademicCommunication = () => {
                             maxLength={THREAD_TITLE_MAX}
                             value={editThreadForm.title}
                             onChange={handleEditThreadChange}
-                            className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                            className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                               editThreadErrors.title
                                 ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                                 : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -965,7 +968,7 @@ const AcademicCommunication = () => {
                             name="topic"
                             value={editThreadForm.topic}
                             onChange={handleEditThreadChange}
-                            className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                            className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                               editThreadErrors.topic
                                 ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                                 : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -997,7 +1000,7 @@ const AcademicCommunication = () => {
                           value={editThreadForm.content}
                           onChange={handleEditThreadChange}
                           rows="5"
-                          className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                          className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                             editThreadErrors.content
                               ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                               : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -1015,7 +1018,7 @@ const AcademicCommunication = () => {
                           type="button"
                           onClick={() => handleSaveThreadEdit(thread._id)}
                           disabled={savingThreadEdit}
-                          className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="h-11 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {savingThreadEdit ? 'Saving...' : 'Save Changes'}
                         </button>
@@ -1023,7 +1026,7 @@ const AcademicCommunication = () => {
                         <button
                           type="button"
                           onClick={closeEditThread}
-                          className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                          className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
                           Cancel
                         </button>
@@ -1057,7 +1060,7 @@ const AcademicCommunication = () => {
                             type="button"
                             onClick={() => handleToggleSaveThread(thread._id)}
                             disabled={savingThreadId === thread._id}
-                            className={`rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+                            className={`h-10 rounded-2xl px-4 text-sm font-semibold transition ${
                               isSaved(thread._id)
                                 ? 'bg-purple-600 text-white hover:bg-purple-700'
                                 : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -1075,7 +1078,7 @@ const AcademicCommunication = () => {
                               <button
                                 type="button"
                                 onClick={() => openEditThread(thread)}
-                                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                               >
                                 Edit
                               </button>
@@ -1084,7 +1087,7 @@ const AcademicCommunication = () => {
                                 type="button"
                                 onClick={() => openDeleteThreadConfirm(thread._id)}
                                 disabled={deletingThreadId === thread._id}
-                                className="rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
                               >
                                 {deletingThreadId === thread._id ? 'Deleting...' : 'Delete'}
                               </button>
@@ -1110,7 +1113,7 @@ const AcademicCommunication = () => {
                                       maxLength={REPLY_MAX}
                                       value={editReplyInputs[reply._id] || ''}
                                       onChange={(e) => handleEditReplyInputChange(reply._id, e.target.value)}
-                                      className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                                      className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                                         editReplyErrors[reply._id]
                                           ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                                           : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -1127,7 +1130,7 @@ const AcademicCommunication = () => {
                                         type="button"
                                         onClick={() => handleSaveReplyEdit(thread._id, reply._id)}
                                         disabled={savingReplyEditId === reply._id}
-                                        className="rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                        className="h-10 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                                       >
                                         {savingReplyEditId === reply._id ? 'Saving...' : 'Save Reply'}
                                       </button>
@@ -1135,7 +1138,7 @@ const AcademicCommunication = () => {
                                       <button
                                         type="button"
                                         onClick={closeEditReply}
-                                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                        className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                                       >
                                         Cancel
                                       </button>
@@ -1161,7 +1164,7 @@ const AcademicCommunication = () => {
                                           <button
                                             type="button"
                                             onClick={() => openEditReply(reply)}
-                                            className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                            className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                                           >
                                             Edit
                                           </button>
@@ -1172,7 +1175,7 @@ const AcademicCommunication = () => {
                                               openDeleteReplyConfirm(thread._id, reply._id)
                                             }
                                             disabled={deletingReplyId === reply._id}
-                                            className="rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                            className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
                                           >
                                             {deletingReplyId === reply._id ? 'Deleting...' : 'Delete'}
                                           </button>
@@ -1197,7 +1200,7 @@ const AcademicCommunication = () => {
                             value={replyInputs[thread._id] || ''}
                             onChange={(e) => handleReplyInputChange(thread._id, e.target.value)}
                             placeholder="Write your reply here"
-                            className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                            className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
                               replyErrors[thread._id]
                                 ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
                                 : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
@@ -1214,7 +1217,7 @@ const AcademicCommunication = () => {
                               type="button"
                               onClick={() => handleAddReply(thread._id)}
                               disabled={replyingThreadId === thread._id}
-                              className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+                              className="h-10 rounded-2xl bg-green-600 px-5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {replyingThreadId === thread._id ? 'Submitting...' : 'Submit Reply'}
                             </button>
@@ -1238,7 +1241,7 @@ const AcademicCommunication = () => {
                 type="button"
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                 disabled={!pagination.hasPrevPage}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Previous
               </button>
@@ -1247,7 +1250,7 @@ const AcademicCommunication = () => {
                 type="button"
                 onClick={() => setPage((prev) => prev + 1)}
                 disabled={!pagination.hasNextPage}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Next
               </button>
