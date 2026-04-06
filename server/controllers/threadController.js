@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Thread = require('../models/Thread');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { getIO } = require('../socket');
 
 // ================= VALIDATION HELPERS =================
 
@@ -72,6 +73,7 @@ exports.getAllThreads = async (req, res) => {
     let sortOption = { createdAt: -1 };
     if (sort === 'oldest') sortOption = { createdAt: 1 };
     if (sort === 'latest-activity') sortOption = { updatedAt: -1 };
+    if (sort === 'most-replies') sortOption = { updatedAt: -1 };
 
     const total = await Thread.countDocuments(query);
     const threads = await Thread.find(query).sort(sortOption).skip(skip).limit(limit);
@@ -90,7 +92,136 @@ exports.getAllThreads = async (req, res) => {
   }
 };
 
-// ================= CREATE THREAD =================
+exports.getMyThreads = async (req, res) => {
+  try {
+    const threads = await Thread.find({ authorId: req.user._id }).sort({ createdAt: -1 });
+    res.json(threads);
+  } catch (error) {
+    console.error('getMyThreads error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getMyRepliedThreads = async (req, res) => {
+  try {
+    const threads = await Thread.find({ 'replies.authorId': req.user._id }).sort({ updatedAt: -1 });
+
+    const formatted = threads.map((thread) => {
+      const myReplies = thread.replies.filter(
+        (reply) => String(reply.authorId || '') === String(req.user._id)
+      );
+
+      return {
+        _id: thread._id,
+        title: thread.title,
+        topic: thread.topic,
+        content: thread.content,
+        author: thread.author,
+        authorId: thread.authorId,
+        createdAt: thread.createdAt,
+        updatedAt: thread.updatedAt,
+        replyCount: thread.replies.length,
+        myReplies,
+      };
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('getMyRepliedThreads error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getMySavedThreads = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: 'savedThreads',
+      options: { sort: { updatedAt: -1 } },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user.savedThreads || []);
+  } catch (error) {
+    console.error('getMySavedThreads error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.saveThread = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
+
+    const thread = await Thread.findById(req.params.id);
+    if (!thread) {
+      return res.status(404).json({ message: 'Thread not found' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const alreadySaved = user.savedThreads.some(
+      (savedId) => String(savedId) === String(thread._id)
+    );
+
+    if (alreadySaved) {
+      return res.status(400).json({ message: 'Thread already saved' });
+    }
+
+    user.savedThreads.push(thread._id);
+    await user.save();
+
+    const notification = await Notification.create({
+      user: user._id,
+      title: 'Thread Saved',
+      message: `You saved the discussion "${thread.title}" to your profile.`,
+      type: 'success',
+      read: false,
+    });
+
+    emitNotificationToUser(user._id, notification);
+
+    res.json({ message: 'Thread saved successfully' });
+  } catch (error) {
+    console.error('saveThread error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.unsaveThread = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
+
+    const thread = await Thread.findById(req.params.id);
+    if (!thread) {
+      return res.status(404).json({ message: 'Thread not found' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.savedThreads = user.savedThreads.filter(
+      (savedId) => String(savedId) !== String(thread._id)
+    );
+
+    await user.save();
+
+    res.json({ message: 'Thread removed from saved discussions' });
+  } catch (error) {
+    console.error('unsaveThread error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
 exports.createThread = async (req, res) => {
   try {
@@ -112,7 +243,6 @@ exports.createThread = async (req, res) => {
       replies: [],
     });
 
-    // notification
     if (req.user?._id) {
       const notification = await Notification.create({
         user: req.user._id,
@@ -127,11 +257,10 @@ exports.createThread = async (req, res) => {
 
     res.status(201).json(thread);
   } catch (error) {
+    console.error('createThread error:', error);
     res.status(500).json({ message: error.message });
   }
 };
-
-// ================= UPDATE THREAD =================
 
 exports.updateThread = async (req, res) => {
   try {
@@ -169,11 +298,10 @@ exports.updateThread = async (req, res) => {
     const saved = await thread.save();
     res.json(saved);
   } catch (error) {
+    console.error('updateThread error:', error);
     res.status(500).json({ message: error.message });
   }
 };
-
-// ================= DELETE THREAD =================
 
 exports.deleteThread = async (req, res) => {
   try {
@@ -202,14 +330,17 @@ exports.deleteThread = async (req, res) => {
 
     res.json({ message: 'Thread deleted successfully' });
   } catch (error) {
+    console.error('deleteThread error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// ================= ADD REPLY =================
-
 exports.addReply = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
+
     const text = sanitize(req.body.text);
 
     const errorMsg = validateReply(text);
@@ -232,11 +363,7 @@ exports.addReply = async (req, res) => {
     thread.replies.push(reply);
     await thread.save();
 
-    // notify thread owner
-    if (
-      thread.authorId &&
-      String(thread.authorId) !== String(req.user._id)
-    ) {
+    if (thread.authorId && String(thread.authorId) !== String(req.user._id)) {
       const notification = await Notification.create({
         user: thread.authorId,
         title: 'New Reply',
@@ -250,14 +377,17 @@ exports.addReply = async (req, res) => {
 
     res.status(201).json(thread);
   } catch (error) {
+    console.error('addReply error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// ================= UPDATE REPLY =================
-
 exports.updateReply = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id) || !isValidObjectId(req.params.replyId)) {
+      return res.status(404).json({ message: 'Invalid thread or reply ID' });
+    }
+
     const text = sanitize(req.body.text);
 
     const errorMsg = validateReply(text);
@@ -283,14 +413,17 @@ exports.updateReply = async (req, res) => {
 
     res.json(thread);
   } catch (error) {
+    console.error('updateReply error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// ================= DELETE REPLY =================
-
 exports.deleteReply = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id) || !isValidObjectId(req.params.replyId)) {
+      return res.status(404).json({ message: 'Invalid thread or reply ID' });
+    }
+
     const thread = await Thread.findById(req.params.id);
     if (!thread) return res.status(404).json({ message: 'Thread not found' });
 
@@ -309,6 +442,7 @@ exports.deleteReply = async (req, res) => {
 
     res.json(thread);
   } catch (error) {
+    console.error('deleteReply error:', error);
     res.status(500).json({ message: error.message });
   }
 };
