@@ -1,4 +1,19 @@
+const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
+const { getIO } = require('../socket');
+
+const ALLOWED_TYPES = ['success', 'info', 'warning', 'error'];
+
+const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+
+const emitToUser = (userId, eventName, payload) => {
+  try {
+    getIO().to(`user:${userId}`).emit(eventName, payload);
+  } catch (error) {
+    console.error(`socket emit error [${eventName}]:`, error.message);
+  }
+};
 
 // GET ALL NOTIFICATIONS FOR LOGGED-IN USER
 const getNotifications = async (req, res) => {
@@ -14,21 +29,39 @@ const getNotifications = async (req, res) => {
 // CREATE NOTIFICATION
 const createNotification = async (req, res) => {
   try {
-    const { title, message, type } = req.body;
+    const title = sanitizeText(req.body.title);
+    const message = sanitizeText(req.body.message);
+    const type = sanitizeText(req.body.type || 'info');
 
-    if (!title || !message) {
-      return res.status(400).json({ message: 'Title and message are required' });
+    if (!title) {
+      return res.status(400).json({ message: 'Notification title is required' });
+    }
+
+    if (title.length < 3 || title.length > 120) {
+      return res.status(400).json({ message: 'Notification title must be between 3 and 120 characters' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ message: 'Notification message is required' });
+    }
+
+    if (message.length < 5 || message.length > 1000) {
+      return res.status(400).json({ message: 'Notification message must be between 5 and 1000 characters' });
+    }
+
+    if (!ALLOWED_TYPES.includes(type)) {
+      return res.status(400).json({ message: 'Invalid notification type' });
     }
 
     const notification = await Notification.create({
       user: req.user._id,
       title,
       message,
-      type: type || 'info',
+      type,
       read: false,
     });
 
-    getIO().to(`user:${req.user._id}`).emit('notification:new', notification);
+    emitToUser(req.user._id, 'notification:new', notification);
 
     res.status(201).json(notification);
   } catch (error) {
@@ -40,6 +73,10 @@ const createNotification = async (req, res) => {
 // MARK ONE AS READ
 const markNotificationAsRead = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
     const notification = await Notification.findOne({
       _id: req.params.id,
       user: req.user._id,
@@ -52,7 +89,7 @@ const markNotificationAsRead = async (req, res) => {
     notification.read = true;
     await notification.save();
 
-    getIO().to(`user:${req.user._id}`).emit('notification:updated', {
+    emitToUser(req.user._id, 'notification:updated', {
       _id: notification._id,
       read: true,
     });
@@ -72,7 +109,9 @@ const markAllNotificationsAsRead = async (req, res) => {
       { $set: { read: true } }
     );
 
-    getIO().to(`user:${req.user._id}`).emit('notification:all-read');
+    emitToUser(req.user._id, 'notification:all-read', {
+      userId: String(req.user._id),
+    });
 
     res.json({ message: 'All notifications marked as read' });
   } catch (error) {
@@ -84,6 +123,10 @@ const markAllNotificationsAsRead = async (req, res) => {
 // DELETE NOTIFICATION
 const deleteNotification = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
     const notification = await Notification.findOne({
       _id: req.params.id,
       user: req.user._id,
@@ -95,7 +138,7 @@ const deleteNotification = async (req, res) => {
 
     await notification.deleteOne();
 
-    getIO().to(`user:${req.user._id}`).emit('notification:deleted', {
+    emitToUser(req.user._id, 'notification:deleted', {
       _id: req.params.id,
     });
 
