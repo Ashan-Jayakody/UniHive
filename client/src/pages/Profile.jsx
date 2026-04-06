@@ -7,6 +7,25 @@ import ExpertMatch from '../components/ExpertMatch';
 const USER_API_BASE = 'http://localhost:5000/api/users';
 const THREAD_API_BASE = 'http://localhost:5000/api/threads';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'.-]{1,99}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+
+const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const parseExpertiseAreas = (value) => {
+  if (!value) return [];
+
+  const cleaned = value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item, index, array) => array.indexOf(item) === index);
+
+  return cleaned.slice(0, 10);
+};
+
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [myThreads, setMyThreads] = useState([]);
@@ -30,6 +49,13 @@ const Profile = () => {
     password: '',
     avatar: '',
     expertiseAreas: [],
+  });
+
+  const [formErrors, setFormErrors] = useState({
+    name: '',
+    email: '',
+    password: '',
+    expertiseAreas: '',
   });
 
   const showToast = (type, message) => {
@@ -85,6 +111,12 @@ const Profile = () => {
         expertiseAreas: Array.isArray(data.expertiseAreas) ? data.expertiseAreas : [],
       });
       setExpertiseInput(Array.isArray(data.expertiseAreas) ? data.expertiseAreas.join(', ') : '');
+      setFormErrors({
+        name: '',
+        email: '',
+        password: '',
+        expertiseAreas: '',
+      });
     } catch (error) {
       showToast('error', error.message);
     } finally {
@@ -140,11 +172,59 @@ const Profile = () => {
     }
   };
 
+  const getNameError = (value) => {
+    const cleanValue = sanitizeText(value);
+
+    if (!cleanValue) return 'Full name is required.';
+    if (!NAME_REGEX.test(cleanValue)) return 'Please enter a valid full name.';
+    return '';
+  };
+
+  const getEmailError = (value) => {
+    const cleanValue = sanitizeText(value).toLowerCase();
+
+    if (!cleanValue) return 'Email address is required.';
+    if (!EMAIL_REGEX.test(cleanValue)) return 'Please enter a valid email address.';
+    return '';
+  };
+
+  const getPasswordError = (value) => {
+    if (!value) return '';
+    if (!PASSWORD_REGEX.test(value)) {
+      return 'Password must be at least 8 characters and include uppercase, lowercase, and a number.';
+    }
+    return '';
+  };
+
+  const getExpertiseError = (value) => {
+    const expertiseAreas = parseExpertiseAreas(value);
+    if (expertiseAreas.some((item) => item.length > 40)) {
+      return 'Each expertise area must be 40 characters or less.';
+    }
+    return '';
+  };
+
   const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    const normalizedValue = name === 'email' ? value.trimStart() : value;
+
     setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: normalizedValue,
     }));
+
+    if (name === 'name') {
+      setFormErrors((prev) => ({ ...prev, name: getNameError(normalizedValue) }));
+    }
+
+    if (name === 'email') {
+      setFormErrors((prev) => ({ ...prev, email: getEmailError(normalizedValue) }));
+    }
+
+    if (name === 'password') {
+      setFormErrors((prev) => ({ ...prev, password: getPasswordError(normalizedValue) }));
+    }
   };
 
   const handleAvatarChange = (e) => {
@@ -153,6 +233,11 @@ const Profile = () => {
 
     if (!file.type.startsWith('image/')) {
       showToast('error', 'Please select a valid image file');
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_SIZE) {
+      showToast('error', 'Image size must be 2 MB or less');
       return;
     }
 
@@ -178,8 +263,50 @@ const Profile = () => {
     }));
   };
 
+  const handleExpertiseChange = (e) => {
+    const value = e.target.value;
+
+    setExpertiseInput(value);
+    setFormData((prev) => ({
+      ...prev,
+      expertiseAreas: parseExpertiseAreas(value),
+    }));
+    setFormErrors((prev) => ({
+      ...prev,
+      expertiseAreas: getExpertiseError(value),
+    }));
+  };
+
+  const validateProfileForm = () => {
+    const currentErrors = {
+      name: getNameError(formData.name),
+      email: getEmailError(formData.email),
+      password: getPasswordError(formData.password),
+      expertiseAreas: getExpertiseError(expertiseInput),
+    };
+
+    setFormErrors(currentErrors);
+
+    if (
+      currentErrors.name ||
+      currentErrors.email ||
+      currentErrors.password ||
+      currentErrors.expertiseAreas
+    ) {
+      return 'Please fix the highlighted profile form errors.';
+    }
+
+    return null;
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+
+    const validationError = validateProfileForm();
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
 
     try {
       setSaving(true);
@@ -190,10 +317,10 @@ const Profile = () => {
       }
 
       const payload = {
-        name: formData.name,
-        email: formData.email,
+        name: sanitizeText(formData.name),
+        email: sanitizeText(formData.email).toLowerCase(),
         avatar: formData.avatar,
-        expertiseAreas: formData.expertiseAreas,
+        expertiseAreas: parseExpertiseAreas(expertiseInput),
       };
 
       if (formData.password.trim()) {
@@ -234,6 +361,11 @@ const Profile = () => {
       }
 
       setFormData((prev) => ({
+        ...prev,
+        password: '',
+        expertiseAreas: parseExpertiseAreas(expertiseInput),
+      }));
+      setFormErrors((prev) => ({
         ...prev,
         password: '',
       }));
@@ -278,370 +410,364 @@ const Profile = () => {
     return value;
   };
 
-  const totalRepliesMade = useMemo(() => {
-    return myRepliedThreads.reduce((sum, item) => sum + (item.myReplies?.length || 0), 0);
-  }, [myRepliedThreads]);
+  const activityStats = useMemo(
+    () => [
+      {
+        title: 'Published Discussions',
+        value: myThreads.length,
+        subtitle: 'Topics you have created within the academic communication module.',
+        badge: 'Threads',
+        cardClass: 'bg-blue-50 ring-1 ring-blue-100',
+        valueClass: 'text-blue-700',
+      },
+      {
+        title: 'Participated Discussions',
+        value: myRepliedThreads.length,
+        subtitle: 'Discussion threads where you contributed replies.',
+        badge: 'Replies',
+        cardClass: 'bg-green-50 ring-1 ring-green-100',
+        valueClass: 'text-green-700',
+      },
+      {
+        title: 'Saved Discussions',
+        value: savedThreads.length,
+        subtitle: 'Threads you bookmarked for later reference.',
+        badge: 'Saved',
+        cardClass: 'bg-purple-50 ring-1 ring-purple-100',
+        valueClass: 'text-purple-700',
+      },
+    ],
+    [myThreads.length, myRepliedThreads.length, savedThreads.length]
+  );
 
-  const statCards = [
-    {
-      title: 'Published Discussions',
-      value: loadingActivity ? '...' : myThreads.length,
-      subtitle: 'Discussion records created under your account.',
-      badge: 'Created',
-      cardClass: 'bg-blue-50 ring-1 ring-blue-100',
-      valueClass: 'text-blue-700',
-    },
-    {
-      title: 'Replies Submitted',
-      value: loadingActivity ? '...' : totalRepliesMade,
-      subtitle: 'Total replies contributed across discussions.',
-      badge: 'Participation',
-      cardClass: 'bg-green-50 ring-1 ring-green-100',
-      valueClass: 'text-green-700',
-    },
-    {
-      title: 'Saved Discussions',
-      value: loadingActivity ? '...' : savedThreads.length,
-      subtitle: 'Discussion records retained for future reference.',
-      badge: 'Saved',
-      cardClass: 'bg-slate-100 ring-1 ring-slate-200',
-      valueClass: 'text-slate-900',
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="app-shell min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-10 text-center shadow-lg">
+            <p className="text-base font-semibold text-slate-700">Loading profile information...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="px-4 py-8 sm:px-6 lg:px-10">
-      <Toast show={toast.show} type={toast.type} message={toast.message} onClose={closeToast} />
+    <div className="app-shell min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={closeToast}
+      />
 
       <div className="mx-auto max-w-7xl space-y-6">
+        <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-700">
+                Profile Workspace
+              </p>
+              <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
+                Personal Profile and Academic Identity
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
+                Review your account status, maintain profile information, manage your avatar, and
+                track your academic communication activity from one place.
+              </p>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Account Snapshot
+              </p>
+              <p className="mt-2 text-base font-semibold text-slate-900">{profile?.name || '-'}</p>
+              <p className="mt-1 text-sm text-slate-600">{profile?.email || '-'}</p>
+            </div>
+          </div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          {statCards.map((item) => (
+          {activityStats.map((item) => (
             <StatCard key={item.title} {...item} />
           ))}
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-          <PanelCard eyebrow="Profile Summary" title="Account Summary">
-            {loading ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                Loading profile information...
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
-                  <p className="text-sm text-slate-500">Profile Image</p>
-                  <div className="mt-3 flex items-center gap-4">
-                    {profile?.avatar ? (
-                      <img
-                        src={profile.avatar}
-                        alt="Profile avatar"
-                        className="h-24 w-24 rounded-full object-cover ring-2 ring-slate-200"
-                      />
-                    ) : (
-                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-green-600 text-3xl font-bold text-white">
-                        {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                    )}
-                    <p className="text-sm text-slate-600">
-                      This image is displayed across your personal profile and platform header.
-                    </p>
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <PanelCard eyebrow="Account Summary" title="Profile Overview">
+            <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
+              <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                <div className="flex flex-col items-center text-center">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Profile avatar"
+                      className="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-green-600 text-4xl font-bold text-white shadow-lg">
+                      {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+
+                  <p className="mt-4 text-lg font-bold text-slate-900">{displayValue(profile?.name)}</p>
+                  <p className="mt-1 text-sm text-slate-600">{displayValue(profile?.email)}</p>
+                  <p className="mt-3 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                    {formatRole(profile?.role)}
+                  </p>
+
+                  <div className="mt-5 grid w-full gap-3">
+                    <label className="cursor-pointer rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700">
+                      Upload New Avatar
+                      <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Remove Avatar
+                    </button>
                   </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Full Name</p>
-                  <p className="mt-1 font-semibold text-slate-900">{displayValue(profile?.name)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Email Address</p>
-                  <p className="mt-1 font-semibold text-slate-900">{displayValue(profile?.email)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Role</p>
-                  <p className="mt-1 font-semibold text-slate-900">{displayValue(formatRole(profile?.role))}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Account Status</p>
-                  <div className="mt-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadge(profile?.status || 'active')}`}>
-                      {profile?.status || 'active'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Faculty</p>
-                  <p className="mt-1 font-semibold text-slate-900">{displayValue(profile?.faculty)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Course</p>
-                  <p className="mt-1 font-semibold text-slate-900">{displayValue(profile?.course)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Academic Year</p>
-                  <p className="mt-1 font-semibold text-slate-900">{displayValue(profile?.academicYear)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Saved Discussions</p>
-                  <p className="mt-1 font-semibold text-slate-900">{savedThreads.length}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
-  <p className="text-sm text-slate-500">Expertise Areas</p>
-  <p className="mt-1 font-semibold text-slate-900">
-    {profile?.expertiseAreas?.length
-      ? profile.expertiseAreas.join(', ')
-      : '-'}
-  </p>
-</div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Helper Badge</p>
-                  <div className="mt-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getYesNoBadge(profile?.helperBadge)}`}>
-                      {profile?.helperBadge ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Email Verified</p>
-                  <div className="mt-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getYesNoBadge(profile?.emailVerified)}`}>
-                      {profile?.emailVerified ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Phone Verified</p>
-                  <div className="mt-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getYesNoBadge(profile?.phoneVerified)}`}>
-                      {profile?.phoneVerified ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm text-slate-500">Account Created</p>
-                  <p className="mt-1 font-semibold text-slate-900">{formatDate(profile?.createdAt)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
-                  <p className="text-sm text-slate-500">Last Updated</p>
-                  <p className="mt-1 font-semibold text-slate-900">{formatDate(profile?.updatedAt)}</p>
                 </div>
               </div>
-            )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Account Status
+                  </p>
+                  <div className="mt-3">
+                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadge(profile?.status)}`}>
+                      {displayValue(profile?.status)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Helper Badge
+                  </p>
+                  <div className="mt-3">
+                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getYesNoBadge(profile?.helperBadge)}`}>
+                      {profile?.helperBadge ? 'Enabled' : 'Not Available'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Email Verification
+                  </p>
+                  <div className="mt-3">
+                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getYesNoBadge(profile?.emailVerified)}`}>
+                      {profile?.emailVerified ? 'Verified' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Phone Verification
+                  </p>
+                  <div className="mt-3">
+                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getYesNoBadge(profile?.phoneVerified)}`}>
+                      {profile?.phoneVerified ? 'Verified' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Faculty
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-slate-900">{displayValue(profile?.faculty)}</p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Course
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-slate-900">{displayValue(profile?.course)}</p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Academic Year
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-slate-900">{displayValue(profile?.academicYear)}</p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Reward Points
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-slate-900">{displayValue(profile?.points)}</p>
+                </div>
+              </div>
+            </div>
           </PanelCard>
 
-          <PanelCard eyebrow="Update Profile" title="Update Profile Information">
-            <form onSubmit={handleUpdateProfile} className="grid gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Profile Image</label>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="mb-4 flex items-center gap-4">
-                    {avatarPreview ? (
-                      <img
-                        src={avatarPreview}
-                        alt="Avatar preview"
-                        className="h-24 w-24 rounded-full object-cover ring-2 ring-slate-200"
-                      />
-                    ) : (
-                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-green-600 text-3xl font-bold text-white">
-                        {formData.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarChange}
-                        disabled={saving || loading}
-                        className="block text-sm text-slate-700"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveAvatar}
-                        disabled={saving || loading}
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        Remove Image
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Select a clear image suitable for display across your UniHive profile.
-                  </p>
-                </div>
-              </div>
-
+          <PanelCard eyebrow="Profile Maintenance" title="Update Profile Information">
+            <form onSubmit={handleUpdateProfile} className="grid gap-5" noValidate>
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">Full Name</label>
                 <input
-                  type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  required
-                  disabled={saving || loading}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  placeholder="Enter your full name"
+                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    formErrors.name
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
                 />
+                {formErrors.name && (
+                  <p className="mt-2 text-xs font-medium text-red-600">{formErrors.name}</p>
+                )}
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
                 <input
-                  type="email"
                   name="email"
+                  type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
-                  disabled={saving || loading}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  placeholder="Enter your email address"
+                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    formErrors.email
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
                 />
+                {formErrors.email && (
+                  <p className="mt-2 text-xs font-medium text-red-600">{formErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">New Password</label>
+                <input
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Leave blank to keep your current password"
+                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    formErrors.password
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
+                />
+                {formErrors.password ? (
+                  <p className="mt-2 text-xs font-medium text-red-600">{formErrors.password}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Enter a new password only if you want to update it.
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  New Password
+                  Areas of Expertise
                 </label>
                 <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Leave blank if no password update is required"
-                  disabled={saving || loading}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  name="expertiseAreas"
+                  value={expertiseInput}
+                  onChange={handleExpertiseChange}
+                  placeholder="Example: Web Development, React, Node.js"
+                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    formErrors.expertiseAreas
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
                 />
+                {formErrors.expertiseAreas ? (
+                  <p className="mt-2 text-xs font-medium text-red-600">{formErrors.expertiseAreas}</p>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Separate multiple expertise areas with commas.
+                  </p>
+                )}
               </div>
 
-              <div>
-  <label className="mb-2 block text-sm font-semibold text-slate-700">
-    Expertise Areas
-  </label>
-<input
-  type="text"
-  name="expertiseAreas"
-  value={expertiseInput}
-  onChange={(e) => {
-    setExpertiseInput(e.target.value);
-    setFormData((prev) => ({
-      ...prev,
-      expertiseAreas: e.target.value
-        .split(',')
-        .map((item) => item.trim())
-        .filter((item) => item !== ''),
-    }));
-  }}
-  placeholder="e.g. React, Node.js, Java"
-  disabled={saving || loading}
-  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-/>
-</div>
-              
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-sm font-semibold text-slate-700">Read-only account information</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Role, status, verification fields, and academic information are displayed from your current account record and are not edited from this section.
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={saving || loading}
-                  className="w-full rounded-2xl bg-blue-600 px-5 py-3.5 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {saving ? 'Saving Changes...' : 'Save Profile Changes'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {saving ? 'Saving Changes...' : 'Save Profile Changes'}
+              </button>
             </form>
           </PanelCard>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-          <PanelCard eyebrow="Published Discussions" title="Your Published Discussions">
-            {loadingActivity ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                Loading discussion records...
-              </div>
-            ) : myThreads.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                No published discussions are currently associated with your account.
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {myThreads.map((thread) => (
-                  <div key={thread._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                        {thread.topic}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                        {thread.replies?.length || 0} replies
-                      </span>
-                    </div>
+        <PanelCard eyebrow="Expert Discovery" title="Expert Matching and Suggested Collaborators">
+          <ExpertMatch />
+        </PanelCard>
 
-                    <h3 className="mt-3 text-lg font-bold text-slate-900">{thread.title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">{thread.content}</p>
-                    <p className="mt-3 text-xs text-slate-500">
-                      Published: {formatDate(thread.createdAt)}
+        <div className="grid gap-6 xl:grid-cols-3">
+          <PanelCard eyebrow="Personal Activity" title="Published Discussions">
+            {loadingActivity ? (
+              <p className="text-sm text-slate-600">Loading discussion history...</p>
+            ) : myThreads.length === 0 ? (
+              <p className="text-sm text-slate-600">You have not published any discussions yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {myThreads.slice(0, 5).map((thread) => (
+                  <div key={thread._id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                    <p className="text-base font-semibold text-slate-900">{thread.title}</p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                      {thread.topic}
                     </p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{thread.content}</p>
+                    <p className="mt-3 text-xs text-slate-500">Created: {formatDate(thread.createdAt)}</p>
                   </div>
                 ))}
               </div>
             )}
           </PanelCard>
 
-          <PanelCard eyebrow="Participation History" title="Discussions You Participated In">
+          <PanelCard eyebrow="Participation" title="Discussions with Your Replies">
             {loadingActivity ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                Loading participation records...
-              </div>
+              <p className="text-sm text-slate-600">Loading participation history...</p>
             ) : myRepliedThreads.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                No participation records are currently available.
-              </div>
+              <p className="text-sm text-slate-600">You have not replied to any discussions yet.</p>
             ) : (
-              <div className="grid gap-4">
-                {myRepliedThreads.map((thread) => (
-                  <div key={thread._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-                        {thread.topic}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                        {thread.myReplies?.length || 0} of your replies
-                      </span>
-                    </div>
-
-                    <h3 className="mt-3 text-lg font-bold text-slate-900">{thread.title}</h3>
-                    <p className="mt-1 text-sm text-slate-500">Discussion author: {thread.author}</p>
-
-                    <div className="mt-3 grid gap-2">
-                      {(thread.myReplies || []).map((reply) => (
-                        <div key={reply._id} className="rounded-xl bg-white px-3 py-3">
-                          <p className="text-sm leading-7 text-slate-700">{reply.text}</p>
-                          <p className="mt-2 text-xs text-slate-500">
-                            Submitted: {formatDate(reply.createdAt)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <p className="mt-3 text-xs text-slate-500">
-                      Latest activity: {formatDate(thread.updatedAt)}
+              <div className="space-y-4">
+                {myRepliedThreads.slice(0, 5).map((thread) => (
+                  <div key={thread._id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                    <p className="text-base font-semibold text-slate-900">{thread.title}</p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-green-700">
+                      {thread.topic}
                     </p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{thread.content}</p>
+                    <p className="mt-3 text-xs text-slate-500">Latest update: {formatDate(thread.updatedAt)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </PanelCard>
+
+          <PanelCard eyebrow="Saved Content" title="Bookmarked Discussions">
+            {loadingActivity ? (
+              <p className="text-sm text-slate-600">Loading saved discussions...</p>
+            ) : savedThreads.length === 0 ? (
+              <p className="text-sm text-slate-600">You do not have any saved discussions yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {savedThreads.slice(0, 5).map((thread) => (
+                  <div key={thread._id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                    <p className="text-base font-semibold text-slate-900">{thread.title}</p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-purple-700">
+                      {thread.topic}
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{thread.content}</p>
+                    <p className="mt-3 text-xs text-slate-500">Saved item created: {formatDate(thread.createdAt)}</p>
                   </div>
                 ))}
               </div>
@@ -649,37 +775,30 @@ const Profile = () => {
           </PanelCard>
         </div>
 
-        <PanelCard eyebrow="Saved Discussions" title="Saved Discussions">
-          {loadingActivity ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-              Loading saved discussions...
-            </div>
-          ) : savedThreads.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-              No saved discussions are currently available in your account.
+        <PanelCard eyebrow="Security and Access Records" title="Recent Login History">
+          {Array.isArray(profile?.loginHistory) && profile.loginHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse overflow-hidden rounded-[1.5rem]">
+                <thead>
+                  <tr className="bg-slate-100 text-left text-sm font-semibold text-slate-700">
+                    <th className="px-4 py-3">Login Time</th>
+                    <th className="px-4 py-3">Device</th>
+                    <th className="px-4 py-3">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.loginHistory.slice(0, 10).map((entry, index) => (
+                    <tr key={index} className="border-b border-slate-100 bg-white text-sm text-slate-600 last:border-b-0">
+                      <td className="px-4 py-3">{formatDate(entry.loginAt)}</td>
+                      <td className="px-4 py-3">{displayValue(entry.device)}</td>
+                      <td className="px-4 py-3">{displayValue(entry.ipAddress)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {savedThreads.map((thread) => (
-                <div key={thread._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                      {thread.topic}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                      {thread.replies?.length || 0} replies
-                    </span>
-                  </div>
-
-                  <h3 className="mt-3 text-lg font-bold text-slate-900">{thread.title}</h3>
-                  <p className="mt-1 text-sm text-slate-500">Discussion author: {thread.author}</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{thread.content}</p>
-                  <p className="mt-3 text-xs text-slate-500">
-                    Latest activity: {formatDate(thread.updatedAt)}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-slate-600">No login history is currently available.</p>
           )}
         </PanelCard>
       </div>
