@@ -8,6 +8,44 @@ import { socket } from '../socket';
 
 const API_BASE = 'http://localhost:5001/api/notifications';
 
+const getCurrentUser = () => {
+  try {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      return {
+        ...parsed,
+        _id: parsed._id || parsed.id || '',
+      };
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      _id: payload._id || payload.id || '',
+      name: payload.name || 'User',
+      email: payload.email || '',
+      role: payload.role || '',
+    };
+  } catch {
+    return null;
+  }
+};
+
+const parseApiResponse = async (response) => {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    message: text || 'Server returned a non-JSON response',
+  };
+};
+
 const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
@@ -31,13 +69,8 @@ const Notifications = () => {
     type: 'info',
   });
 
-  const currentUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || 'null');
-    } catch {
-      return null;
-    }
-  })();
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?._id || currentUser?.id || '';
 
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
@@ -48,13 +81,45 @@ const Notifications = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    const loadNotifications = async () => {
+      try {
+        setLoading(true);
+
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(API_BASE, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await parseApiResponse(response);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Unable to load notifications');
+        }
+
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        showToast('error', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
   }, []);
 
   useEffect(() => {
-    if (!currentUser?._id) return;
+    if (!currentUserId) return;
 
-    socket.emit('join-user-room', currentUser._id);
+    const joinUserRoom = () => {
+      socket.emit('join-user-room', currentUserId);
+    };
+
+    joinUserRoom();
+    socket.on('connect', joinUserRoom);
 
     const onNew = (notification) => {
       setNotifications((prev) => [notification, ...prev]);
@@ -82,39 +147,13 @@ const Notifications = () => {
     socket.on('notification:deleted', onDeleted);
 
     return () => {
+      socket.off('connect', joinUserRoom);
       socket.off('notification:new', onNew);
       socket.off('notification:updated', onUpdated);
       socket.off('notification:all-read', onAllRead);
       socket.off('notification:deleted', onDeleted);
     };
-  }, [currentUser?._id]);
-
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(API_BASE, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to load notifications');
-      }
-
-      setNotifications(Array.isArray(data) ? data : []);
-    } catch (error) {
-      showToast('error', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [currentUserId]);
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter((item) => {
@@ -202,7 +241,7 @@ const Notifications = () => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to create notification');
@@ -233,7 +272,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to update notification status');
@@ -258,7 +297,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to update notifications');
@@ -283,7 +322,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to delete notification');

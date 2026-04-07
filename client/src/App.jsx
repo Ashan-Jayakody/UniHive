@@ -6,6 +6,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RequestHelp from "./components/RequestHelp";
 import MyInvitations from "./pages/Myinvitations";
+import MyRequests from "./pages/MyRequests";
+import ChatRoom from "./pages/ChatRoom";
 import HelpBoard from "./pages/HelpBoard";
 import UserManagement from "./pages/UserManagement";
 import AcademicCommunication from "./pages/AcademicCommunication";
@@ -20,6 +22,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ResendVerification from "./pages/ResendVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PeerTutoring from "./pages/PeerTutoring";
+import ResourceShare from "./pages/ResourceShare";
+import ResourceAnalytics from "./pages/ResourceAnalytics";
 
 const AppLayout = () => (
   <div className="min-h-screen bg-slate-50 ">
@@ -109,6 +113,24 @@ function App() {
           />
 
           <Route
+            path="/myrequests"
+            element={ 
+              <ProtectedRoute>
+                <MyRequests />
+              </ProtectedRoute>
+            }
+          />  
+
+          <Route
+            path="/chat/:id"
+            element={ 
+              <ProtectedRoute>
+                <ChatRoom />
+              </ProtectedRoute>
+            }
+          />  
+
+          <Route
             path="/users"
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
@@ -134,6 +156,24 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/resourceShare"
+            element={
+              <ProtectedRoute>
+                <ResourceShare />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resource-analytics"
+            element={
+            <ProtectedRoute allowedRoles={["faculty", "admin"]}>
+            <ResourceAnalytics />
+            </ProtectedRoute>
+  }
+/>
+
         </Route>
       </Routes>
     </Router>
