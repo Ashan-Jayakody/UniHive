@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Toast from '../components/Toast';
 
-const API_BASE = 'http://localhost:5000/api/auth';
+const API_BASE = 'http://localhost:5001/api/auth';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
