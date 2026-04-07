@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
-const API_BASE = 'http://localhost:5001/api/auth';
+const API_BASE = 'http://localhost:5000/api/auth';
 
 const facultyOptions = ['Computing', 'Engineering', 'Business', 'Humanities'];
 

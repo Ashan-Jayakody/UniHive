@@ -4,8 +4,8 @@ import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 import ExpertMatch from '../components/ExpertMatch';
 
-const USER_API_BASE = 'http://localhost:5001/api/users';
-const THREAD_API_BASE = 'http://localhost:5001/api/threads';
+const USER_API_BASE = 'http://localhost:5000/api/users';
+const THREAD_API_BASE = 'http://localhost:5000/api/threads';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
