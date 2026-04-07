@@ -29,7 +29,7 @@ const uploadResourceFile = (req, res, next) => {
     });
   });
 };
-const upload = require('../middleware/upload');
+const upload = require('../middleware/resourceUploadMiddleware');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const {
   createResource,
