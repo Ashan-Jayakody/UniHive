@@ -5,7 +5,7 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:5001/api/threads';
+const API_BASE = 'http://localhost:5000/api/threads';
 
 const AcademicCommunication = () => {
   const [threads, setThreads] = useState([]);
