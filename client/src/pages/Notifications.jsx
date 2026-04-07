@@ -61,30 +61,6 @@ const Notifications = () => {
     setToast({ show: false, type: 'success', message: '' });
   };
 
-  const getFieldError = (name, value) => {
-    const cleanValue = sanitizeText(value);
-
-    if (name === 'title') {
-      if (!cleanValue) return 'Notification title is required.';
-      if (cleanValue.length < 3) return 'Title must be at least 3 characters.';
-      if (cleanValue.length > 120) return 'Title must be 120 characters or less.';
-    }
-
-    if (name === 'message') {
-      if (!cleanValue) return 'Notification message is required.';
-      if (cleanValue.length < 5) return 'Message must be at least 5 characters.';
-      if (cleanValue.length > 1000) return 'Message must be 1000 characters or less.';
-    }
-
-    if (name === 'type') {
-      if (!['success', 'info', 'warning', 'error'].includes(value)) {
-        return 'Please select a valid notification type.';
-      }
-    }
-
-    return '';
-  };
-
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -152,6 +128,30 @@ const Notifications = () => {
       socket.off('notification:deleted', handleDeleted);
     };
   }, []);
+
+  const getFieldError = (name, value) => {
+    const cleanValue = sanitizeText(value);
+
+    if (name === 'title') {
+      if (!cleanValue) return 'Notification title is required.';
+      if (cleanValue.length < 3) return 'Title must be at least 3 characters.';
+      if (cleanValue.length > 120) return 'Title must be 120 characters or less.';
+    }
+
+    if (name === 'message') {
+      if (!cleanValue) return 'Notification message is required.';
+      if (cleanValue.length < 5) return 'Message must be at least 5 characters.';
+      if (cleanValue.length > 1000) return 'Message must be 1000 characters or less.';
+    }
+
+    if (name === 'type') {
+      if (!['success', 'info', 'warning', 'error'].includes(value)) {
+        return 'Please select a valid notification type.';
+      }
+    }
+
+    return '';
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -245,10 +245,6 @@ const Notifications = () => {
       if (!response.ok) {
         throw new Error(data.message || 'Unable to mark notification as read');
       }
-
-      setNotifications((prev) =>
-        prev.map((item) => (item._id === id ? { ...item, read: true } : item))
-      );
     } catch (error) {
       showToast('error', error.message);
     } finally {
@@ -273,7 +269,6 @@ const Notifications = () => {
         throw new Error(data.message || 'Unable to mark all notifications as read');
       }
 
-      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
       showToast('success', 'All notifications marked as read');
     } catch (error) {
       showToast('error', error.message);
@@ -299,7 +294,6 @@ const Notifications = () => {
         throw new Error(data.message || 'Unable to delete notification');
       }
 
-      setNotifications((prev) => prev.filter((item) => item._id !== id));
       showToast('success', 'Notification deleted successfully');
     } catch (error) {
       showToast('error', error.message);

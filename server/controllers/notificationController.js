@@ -15,7 +15,6 @@ const emitToUser = (userId, eventName, payload) => {
   }
 };
 
-// GET ALL NOTIFICATIONS FOR LOGGED-IN USER
 const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -26,7 +25,6 @@ const getNotifications = async (req, res) => {
   }
 };
 
-// CREATE NOTIFICATION
 const createNotification = async (req, res) => {
   try {
     const title = sanitizeText(req.body.title);
@@ -70,7 +68,6 @@ const createNotification = async (req, res) => {
   }
 };
 
-// MARK ONE AS READ
 const markNotificationAsRead = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -101,7 +98,6 @@ const markNotificationAsRead = async (req, res) => {
   }
 };
 
-// MARK ALL AS READ
 const markAllNotificationsAsRead = async (req, res) => {
   try {
     await Notification.updateMany(
@@ -120,7 +116,6 @@ const markAllNotificationsAsRead = async (req, res) => {
   }
 };
 
-// DELETE NOTIFICATION
 const deleteNotification = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
