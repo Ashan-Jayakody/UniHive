@@ -1,6 +1,7 @@
 const Thread = require('../models/Thread');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { getIO } = require('../socket');
 
 
 const emitNotificationToUser = (userId, notification) => {

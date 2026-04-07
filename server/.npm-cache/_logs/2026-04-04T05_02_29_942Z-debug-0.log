@@ -7,7 +7,8 @@
 6 silly config load:file:C:\Users\POWER USER\AppData\Roaming\npm\etc\npmrc
 7 verbose title npm start
 8 verbose argv "start"
-9 verbose logfile logs-max:10 dir:C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npm-cache\_logs\2026-03-25T04_17_20_634Z-
-10 verbose logfile C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npm-cache\_logs\2026-03-25T04_17_20_634Z-debug-0.log
+9 verbose logfile logs-max:10 dir:C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npm-cache\_logs\2026-04-04T05_02_29_942Z-
+10 verbose logfile C:\Users\POWER USER\Documents\GitHub\UniHive\server\.npm-cache\_logs\2026-04-04T05_02_29_942Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
+13 http fetch GET 200 https://registry.npmjs.org/npm 910ms
