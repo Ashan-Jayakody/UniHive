@@ -21,7 +21,6 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResendVerification from "./pages/ResendVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
-import PeerTutoring from "./pages/PeerTutoring";
 import ResourceShare from "./pages/ResourceShare";
 import ResourceAnalytics from "./pages/ResourceAnalytics";
 
@@ -135,15 +134,6 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <UserManagement />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/peerTutoring"
-            element={
-              <ProtectedRoute>
-                <PeerTutoring />
               </ProtectedRoute>
             }
           />

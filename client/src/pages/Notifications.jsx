@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 import { socket } from '../socket';
 
-const API_BASE = 'http://localhost:5001/api/notifications';
+const API_BASE = 'http://localhost:5000/api/notifications';
 
 const getCurrentUser = () => {
   try {
@@ -47,7 +46,6 @@ const parseApiResponse = async (response) => {
 };
 
 const Notifications = () => {
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -477,11 +475,7 @@ const Notifications = () => {
                 filteredNotifications.map((item) => (
                   <div
                     key={item._id}
-                    onClick={() => {
-                        if (item.link) navigate(item.link);
-                        if (!item.read) handleMarkAsRead(item._id);
-                    }}
-                    className={`rounded-2xl border p-4 shadow-sm cursor-pointer hover:shadow-md transition ${
+                    className={`rounded-2xl border p-4 shadow-sm ${
                       item.read ? 'border-slate-200 bg-slate-50' : 'border-blue-200 bg-blue-50/50'
                     }`}
                   >
@@ -509,10 +503,7 @@ const Notifications = () => {
                         {!item.read && (
                           <button
                             type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleMarkAsRead(item._id);
-                            }}
+                            onClick={() => handleMarkAsRead(item._id)}
                             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                           >
                             Mark as Read
@@ -521,10 +512,7 @@ const Notifications = () => {
 
                         <button
                           type="button"
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(item._id);
-                          }}
+                          onClick={() => handleDelete(item._id)}
                           className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
                         >
                           Delete

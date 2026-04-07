@@ -7,7 +7,7 @@ import {
   Wrench, Bell, LogOut, MessageSquare
 } from 'lucide-react';
 
-const NOTIFICATION_API = 'http://localhost:5001/api/notifications';
+const NOTIFICATION_API = 'http://localhost:5000/api/notifications';
 
 const getCurrentUser = () => {
   try {
@@ -432,14 +432,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                       latestNotifications.map((item) => (
                         <div
                           key={item._id}
-                          onClick={() => {
-                            if (item.link) {
-                               navigate(item.link);
-                               setDropdownOpen(false);
-                            }
-                            if (!item.read) handleMarkAsRead(item._id);
-                          }}
-                          className={`border-b border-slate-100 px-4 py-3 last:border-0 cursor-pointer hover:bg-slate-50 transition ${
+                          className={`border-b border-slate-100 px-4 py-3 last:border-0 ${
                             item.read ? 'bg-white' : 'bg-blue-50/60'
                           }`}
                         >
@@ -472,10 +465,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                             {!item.read && (
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMarkAsRead(item._id);
-                                }}
+                                onClick={() => handleMarkAsRead(item._id)}
                                 className="shrink-0 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-blue-700"
                               >
                                 Mark read
