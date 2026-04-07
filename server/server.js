@@ -70,6 +70,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/request', require('./routes/helpRequestRoutes'));
+app.use('/api/sessions', require('./routes/sessionRoutes'));
 
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
     res.status(204).end();
