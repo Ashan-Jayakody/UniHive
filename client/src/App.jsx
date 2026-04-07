@@ -20,6 +20,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ResendVerification from "./pages/ResendVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ResourceShare from "./pages/ResourceShare";
+import ResourceAnalytics from "./pages/ResourceAnalytics";
 
 const AppLayout = () => (
   <div className="min-h-screen bg-slate-50 ">
@@ -134,6 +135,14 @@ function App() {
             }
           />
 
+          <Route
+            path="/resource-analytics"
+            element={
+            <ProtectedRoute allowedRoles={["faculty", "admin"]}>
+            <ResourceAnalytics />
+            </ProtectedRoute>
+  }
+/>
 
         </Route>
       </Routes>

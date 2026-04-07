@@ -56,6 +56,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?._id || currentUser?.id || '';
   const isAdmin    = currentUser?.role === 'admin';
+  const canViewResourceAnalytics = ['faculty', 'admin'].includes(currentUser?.role);
 
 
   const [notifications,        setNotifications]        = useState([]);
@@ -64,33 +65,44 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
 
   const dropdownRef = useRef(null);
 
- 
-  const fetchNotifications = async () => {
-    try {
-      if (!currentUser) return;
-      setLoadingNotifications(true);
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(NOTIFICATION_API, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) return;
-      setNotifications(Array.isArray(data) ? data : []);
-    } catch {
-      // silent
-    } finally {
-      setLoadingNotifications(false);
+  const parseApiResponse = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return response.json();
     }
+
+    const text = await response.text();
+    return {
+      message: text || 'Server returned a non-JSON response',
+    };
   };
 
  
   useEffect(() => {
     if (!currentUserId) return;
+
+    const fetchNotifications = async () => {
+      try {
+        if (!currentUserId) return;
+        setLoadingNotifications(true);
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(NOTIFICATION_API, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await parseApiResponse(response);
+        if (!response.ok) return;
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch {
+        // silent
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
 
     const joinUserRoom = () => {
       socket.emit('join-user-room', currentUserId);
@@ -193,7 +205,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch {
-      
+      // ignore request errors in quick action
     }
   };
 
@@ -207,7 +219,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch {
-      
+      // ignore request errors in quick action
     }
   };
 
@@ -224,7 +236,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
  
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-600
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col bg-linear-to-br from-blue-700 via-blue-600 to-emerald-600
                          border border-white/10 shadow-2xl text-white">
 
         {/* Logo */}
@@ -265,6 +277,12 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           {currentUser && (
             <SidebarLink to="/resourceShare" label="Resource Sharing" active={activePath === '/resourceShare'}>
               <Folder size={15} strokeWidth={1.5} />
+            </SidebarLink>
+          )}
+
+          {canViewResourceAnalytics && (
+            <SidebarLink to="/resource-analytics" label="Resource Analytics" active={activePath === '/resource-analytics'}>
+              <BarChart2 size={15} strokeWidth={1.5} />
             </SidebarLink>
           )}
 
@@ -358,12 +376,13 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         <div>
           <p className="text-[11px] text-slate-400">UniHive / {title}</p>
           <p className="text-sm font-semibold text-slate-800">{title}</p>
+          {subtitle ? <p className="text-[11px] text-slate-500">{subtitle}</p> : null}
         </div>
 
         <div className="flex items-center gap-2.5">
 
           {currentUser && (
-            <div className="relative z-[200]" ref={dropdownRef}>
+            <div className="relative z-200" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen((prev) => !prev)}
@@ -371,7 +390,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
               >
                 <Bell size={15} strokeWidth={1.5} />
                 {!loadingNotifications && unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -379,7 +398,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
 
              
               {dropdownOpen && (
-                <div className="absolute right-0 top-full z-[99999] mt-2 w-[370px] rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <div className="absolute right-0 top-full z-99999 mt-2 w-92.5 rounded-2xl border border-slate-200 bg-white shadow-xl">
 
                   <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                     <div>
@@ -400,7 +419,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                     </button>
                   </div>
 
-                  <div className="max-h-[360px] overflow-y-auto">
+                  <div className="max-h-90 overflow-y-auto">
                     {loadingNotifications ? (
                       <p className="py-6 text-center text-sm text-slate-400">
                         Loading notifications…
@@ -518,12 +537,12 @@ const SidebarLink = ({ to, label, active, badge, children }) => (
         : 'text-white hover:bg-white/10 hover:text-white'
     }`}
   >
-    <span className={`flex-shrink-0 ${active ? 'opacity-100' : 'opacity-60 group-hover:opacity-90'}`}>
+    <span className={`shrink-0 ${active ? 'opacity-100' : 'opacity-60 group-hover:opacity-90'}`}>
       {children}
     </span>
     <span className="flex-1">{label}</span>
     {badge && (
-      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
         {badge > 99 ? '99+' : badge}
       </span>
     )}

@@ -33,6 +33,18 @@ const getCurrentUser = () => {
   }
 };
 
+const parseApiResponse = async (response) => {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    message: text || 'Server returned a non-JSON response',
+  };
+};
+
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +79,34 @@ const Notifications = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    const loadNotifications = async () => {
+      try {
+        setLoading(true);
+
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(API_BASE, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await parseApiResponse(response);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Unable to load notifications');
+        }
+
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        showToast('error', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
   }, []);
 
   useEffect(() => {
@@ -113,33 +152,6 @@ const Notifications = () => {
       socket.off('notification:deleted', onDeleted);
     };
   }, [currentUserId]);
-
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(API_BASE, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to load notifications');
-      }
-
-      setNotifications(Array.isArray(data) ? data : []);
-    } catch (error) {
-      showToast('error', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter((item) => {
@@ -227,7 +239,7 @@ const Notifications = () => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to create notification');
@@ -258,7 +270,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to update notification status');
@@ -283,7 +295,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to update notifications');
@@ -308,7 +320,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to delete notification');
