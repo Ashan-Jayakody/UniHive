@@ -4,7 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const {initSocket} = require('./socket');
+const { initSocket } = require('./socket');
 require('dotenv').config();
 
 const app = express();
@@ -18,9 +18,39 @@ const io = new Server(server, {
     }
 });
 
+// Initialize socket
+initSocket(io);
+
+// Make io available in routes
 app.use((req, res, next) => {
     req.io = io;
     next();
+});
+
+// Socket events
+io.on('connection', (socket) => {
+    console.log(`User connected via Socket: ${socket.id}`);
+
+    // User Room
+    socket.on('join-user-room', (userId) => {
+        if (userId) {
+            socket.join(`user:${userId}`);
+        }
+    });
+
+    // Help Request Room
+    socket.on('join_request_room', (requestId) => {
+        socket.join(`help:${requestId}`);
+        console.log(`User ${socket.id} joined help request room: ${requestId}`);
+    });
+
+    socket.on('send_message', (data) => {
+        socket.to(`help:${data.requestId}`).emit('receive_message', data);
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`User Disconnected: ${socket.id}`);
+    });
 });
 
 app.use(cors({ 
@@ -28,6 +58,7 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -39,8 +70,6 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/request', require('./routes/helpRequestRoutes'));
-
-initSocket(io);
 
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
     res.status(204).end();
