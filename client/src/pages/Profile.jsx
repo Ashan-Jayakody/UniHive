@@ -14,6 +14,26 @@ const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 
+const capitalizeName = (value) => {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trimStart()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word
+        .split(/([-'])/)
+        .map((part) =>
+          part === '-' || part === "'"
+            ? part
+            : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join('')
+    )
+    .join(' ');
+};
+
 const parseExpertiseAreas = (value) => {
   if (!value) return [];
 
@@ -207,7 +227,15 @@ const Profile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    const normalizedValue = name === 'email' ? value.trimStart() : value;
+    let normalizedValue = value;
+
+    if (name === 'name') {
+      normalizedValue = capitalizeName(value);
+    }
+
+    if (name === 'email') {
+      normalizedValue = value.trimStart().toLowerCase();
+    }
 
     setFormData((prev) => ({
       ...prev,

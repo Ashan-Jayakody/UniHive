@@ -20,6 +20,26 @@ const ACADEMIC_YEAR_OPTIONS = ['1', '2', '3', '4'];
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 const normalizeEmail = (email) => sanitizeText(email).toLowerCase();
 
+const capitalizeName = (value) => {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word
+        .split(/([-'])/)
+        .map((part) =>
+          part === '-' || part === "'"
+            ? part
+            : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join('')
+    )
+    .join(' ');
+};
+
 const generateToken = (id, name, email, role, status, avatar = '', emailVerified = false) => {
   return jwt.sign(
     { id, name, email, role, status, avatar, emailVerified },
@@ -37,13 +57,14 @@ const validateRegisterInput = ({
   course,
   academicYear,
 }) => {
-  const cleanName = sanitizeText(name);
+  const cleanName = capitalizeName(name);
   const cleanEmail = normalizeEmail(email);
   const cleanPassword = typeof password === 'string' ? password : '';
   const cleanRole = sanitizeText(role);
   const cleanFaculty = sanitizeText(faculty);
   const cleanCourse = sanitizeText(course);
-  const cleanAcademicYear = academicYear !== undefined && academicYear !== null ? String(academicYear).trim() : '';
+  const cleanAcademicYear =
+    academicYear !== undefined && academicYear !== null ? String(academicYear).trim() : '';
 
   if (!cleanName || !cleanEmail || !cleanPassword || !cleanRole) {
     return 'Please fill all required fields';
@@ -97,18 +118,9 @@ const validateRegisterInput = ({
   return null;
 };
 
-// REGISTER
-exports.registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      password,
-      role,
-      faculty,
-      course,
-      academicYear,
-    } = req.body;
+    const { name, email, password, role, faculty, course, academicYear } = req.body;
 
     const validationError = validateRegisterInput({
       name,
@@ -124,7 +136,7 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ message: validationError });
     }
 
-    const cleanName = sanitizeText(name);
+    const cleanName = capitalizeName(name);
     const cleanEmail = normalizeEmail(email);
     const cleanRole = sanitizeText(role);
     const cleanFaculty = cleanRole === 'admin' ? '' : sanitizeText(faculty);
@@ -190,8 +202,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// LOGIN
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
     const password = typeof req.body.password === 'string' ? req.body.password : '';
@@ -246,8 +257,7 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// FORGOT PASSWORD
-exports.forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
 
@@ -291,8 +301,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// RESET PASSWORD
-exports.resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
   try {
     const token = sanitizeText(req.body.token);
     const password = typeof req.body.password === 'string' ? req.body.password : '';
@@ -303,7 +312,8 @@ exports.resetPassword = async (req, res) => {
 
     if (!PASSWORD_REGEX.test(password)) {
       return res.status(400).json({
-        message: 'Password must be at least 8 characters and include uppercase, lowercase, and a number',
+        message:
+          'Password must be at least 8 characters and include uppercase, lowercase, and a number',
       });
     }
 
@@ -336,8 +346,7 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// VERIFY EMAIL
-exports.verifyEmail = async (req, res) => {
+const verifyEmail = async (req, res) => {
   try {
     const token = sanitizeText(req.body.token);
 
@@ -377,8 +386,7 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// RESEND EMAIL VERIFICATION
-exports.resendEmailVerification = async (req, res) => {
+const resendEmailVerification = async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
 
@@ -424,4 +432,13 @@ exports.resendEmailVerification = async (req, res) => {
     console.error('resendEmailVerification error:', error);
     res.status(500).json({ message: error.message });
   }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+  resendEmailVerification,
 };

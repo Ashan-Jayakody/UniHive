@@ -18,6 +18,26 @@ const courseMap = {
 
 const academicYearOptions = ['1', '2', '3', '4'];
 
+const capitalizeName = (value) => {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trimStart()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word
+        .split(/([-'])/)
+        .map((part) =>
+          part === '-' || part === "'"
+            ? part
+            : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join('')
+    )
+    .join(' ');
+};
+
 const Register = () => {
   const navigate = useNavigate();
 
@@ -63,7 +83,12 @@ const Register = () => {
 
     let updated = {
       ...formData,
-      [name]: name === 'email' ? value.trimStart() : value,
+      [name]:
+        name === 'email'
+          ? value.trimStart().toLowerCase()
+          : name === 'name'
+          ? capitalizeName(value)
+          : value,
     };
 
     if (name === 'role') {
