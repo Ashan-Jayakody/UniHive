@@ -5,7 +5,7 @@ import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 import { socket } from '../socket';
 
-const API_BASE = 'http://localhost:5000/api/notifications';
+const API_BASE = 'http://localhost:8000/api/notifications';
 
 const getCurrentUser = () => {
   try {
