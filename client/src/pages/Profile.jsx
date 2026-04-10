@@ -6,12 +6,14 @@ import ExpertMatch from '../components/ExpertMatch';
 
 const USER_API_BASE = 'http://localhost:8000/api/users';
 const THREAD_API_BASE = 'http://localhost:8000/api/threads';
+const PEER_TUTORING_API_BASE = 'http://localhost:8000/api/peer-tutoring';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [myThreads, setMyThreads] = useState([]);
   const [myRepliedThreads, setMyRepliedThreads] = useState([]);
   const [savedThreads, setSavedThreads] = useState([]);
+  const [myPeerTutoringSessions, setMyPeerTutoringSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,7 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfile = async () => {
@@ -101,7 +104,7 @@ const Profile = () => {
         throw new Error('No login token found');
       }
 
-      const [threadsRes, repliedRes, savedRes] = await Promise.all([
+      const [threadsRes, repliedRes, savedRes, tutoringRes] = await Promise.all([
         fetch(`${THREAD_API_BASE}/mine`, {
           headers: {
             'Content-Type': 'application/json',
@@ -120,19 +123,28 @@ const Profile = () => {
             Authorization: `Bearer ${token}`,
           },
         }),
+        fetch(`${PEER_TUTORING_API_BASE}/mine`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }),
       ]);
 
       const threadsData = await threadsRes.json();
       const repliedData = await repliedRes.json();
       const savedData = await savedRes.json();
+      const tutoringData = await tutoringRes.json();
 
       if (!threadsRes.ok) throw new Error(threadsData.message || 'Unable to load your published discussions');
       if (!repliedRes.ok) throw new Error(repliedData.message || 'Unable to load your participation history');
       if (!savedRes.ok) throw new Error(savedData.message || 'Unable to load saved discussions');
+      if (!tutoringRes.ok) throw new Error(tutoringData.message || 'Unable to load your tutoring sessions');
 
       setMyThreads(Array.isArray(threadsData) ? threadsData : []);
       setMyRepliedThreads(Array.isArray(repliedData) ? repliedData : []);
       setSavedThreads(Array.isArray(savedData) ? savedData : []);
+      setMyPeerTutoringSessions(Array.isArray(tutoringData.sessions) ? tutoringData.sessions : []);
     } catch (error) {
       showToast('error', error.message);
     } finally {
@@ -306,6 +318,14 @@ const Profile = () => {
       badge: 'Saved',
       cardClass: 'bg-slate-100 ring-1 ring-slate-200',
       valueClass: 'text-slate-900',
+    },
+    {
+      title: 'My Tutoring Sessions',
+      value: loadingActivity ? '...' : myPeerTutoringSessions.length,
+      subtitle: 'Sessions you have created or are managing.',
+      badge: 'Tutoring',
+      cardClass: 'bg-violet-50 ring-1 ring-violet-100',
+      valueClass: 'text-violet-700',
     },
   ];
 
@@ -677,6 +697,36 @@ const Profile = () => {
                   <p className="mt-3 text-xs text-slate-500">
                     Latest activity: {formatDate(thread.updatedAt)}
                   </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </PanelCard>
+
+        <PanelCard eyebrow="Tutoring Sessions" title="My Tutoring Sessions">
+          {loadingActivity ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
+              Loading tutoring sessions...
+            </div>
+          ) : myPeerTutoringSessions.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
+              You have not created any tutoring sessions yet.
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {myPeerTutoringSessions.map((session) => (
+                <div key={session._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                      {session.approvalStatus || 'pending'}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {new Date(session.date).toLocaleDateString()} • {session.time}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-lg font-bold text-slate-900">{session.moduleName}</h3>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">{session.description}</p>
+                  <p className="mt-3 text-xs text-slate-500">Maximum students: {session.maxStudents}</p>
                 </div>
               ))}
             </div>
