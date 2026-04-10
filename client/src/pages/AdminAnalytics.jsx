@@ -4,7 +4,7 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:5000/api/admin/analytics';
+const API_BASE = 'http://localhost:5000/api/admin-analytics';
 
 const AdminAnalytics = () => {
   const [data, setData] = useState(null);
@@ -35,13 +35,21 @@ const AdminAnalytics = () => {
       const token = localStorage.getItem('token');
 
       const response = await fetch(API_BASE, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token || ''}`,
         },
       });
 
-      const result = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const text = await response.text();
+
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response. Preview: ${text.slice(0, 120)}`);
+      }
+
+      const result = JSON.parse(text);
 
       if (!response.ok) {
         throw new Error(result.message || 'Failed to load administrative analytics');
@@ -49,7 +57,8 @@ const AdminAnalytics = () => {
 
       setData(result);
     } catch (error) {
-      showToast('error', error.message);
+      console.error('Admin analytics fetch error:', error);
+      showToast('error', error.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -133,13 +142,40 @@ const AdminAnalytics = () => {
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Students</p><p className="mt-2 text-3xl font-bold text-blue-700">{overview.totalStudents ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Faculty Members</p><p className="mt-2 text-3xl font-bold text-green-700">{overview.totalFaculty ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Administrators</p><p className="mt-2 text-3xl font-bold text-slate-900">{overview.totalAdmins ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Active Accounts</p><p className="mt-2 text-3xl font-bold text-green-700">{overview.activeUsers ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Deactivated</p><p className="mt-2 text-3xl font-bold text-yellow-700">{overview.deactivatedUsers ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Suspended</p><p className="mt-2 text-3xl font-bold text-orange-700">{overview.suspendedUsers ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2"><p className="text-sm text-slate-500">Banned Accounts</p><p className="mt-2 text-3xl font-bold text-red-700">{overview.bannedUsers ?? 0}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Students</p>
+                  <p className="mt-2 text-3xl font-bold text-blue-700">{overview.totalStudents ?? 0}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Faculty Members</p>
+                  <p className="mt-2 text-3xl font-bold text-green-700">{overview.totalFaculty ?? 0}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Administrators</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900">{overview.totalAdmins ?? 0}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Active Accounts</p>
+                  <p className="mt-2 text-3xl font-bold text-green-700">{overview.activeUsers ?? 0}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Deactivated</p>
+                  <p className="mt-2 text-3xl font-bold text-yellow-700">{overview.deactivatedUsers ?? 0}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Suspended</p>
+                  <p className="mt-2 text-3xl font-bold text-orange-700">{overview.suspendedUsers ?? 0}</p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                  <p className="text-sm text-slate-500">Banned Accounts</p>
+                  <p className="mt-2 text-3xl font-bold text-red-700">{overview.bannedUsers ?? 0}</p>
+                </div>
               </div>
             )}
           </PanelCard>
@@ -198,6 +234,7 @@ const AdminAnalytics = () => {
                         <p className="text-base font-bold text-slate-900">{user.name}</p>
                         <p className="mt-1 text-sm text-slate-500">{user.email}</p>
                       </div>
+
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadge(user.status || 'active')}`}>
                         {user.status || 'active'}
                       </span>
@@ -207,6 +244,7 @@ const AdminAnalytics = () => {
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
                         {user.role}
                       </span>
+
                       {user.faculty ? (
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                           {user.faculty}
@@ -238,6 +276,7 @@ const AdminAnalytics = () => {
                       <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
                         {thread.topic}
                       </span>
+
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                         {(thread.replies || []).length} replies
                       </span>

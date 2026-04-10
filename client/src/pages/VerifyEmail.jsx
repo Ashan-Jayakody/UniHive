@@ -24,8 +24,28 @@ const VerifyEmail = () => {
     setToast({ show: false, type: 'success', message: '' });
   };
 
+  const validateForm = () => {
+    const cleanToken = token.trim();
+
+    if (!cleanToken) {
+      return 'Verification token is required.';
+    }
+
+    if (cleanToken.length < 20) {
+      return 'Please enter a valid verification token.';
+    }
+
+    return null;
+  };
+
   const handleVerify = async (e) => {
     e.preventDefault();
+
+    const validationError = validateForm();
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -33,7 +53,7 @@ const VerifyEmail = () => {
       const response = await fetch(`${API_BASE}/verify-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token: token.trim() }),
       });
 
       const data = await response.json();
@@ -79,11 +99,9 @@ const VerifyEmail = () => {
           Paste the verification token below to confirm ownership of your registered email address.
         </p>
 
-        <form onSubmit={handleVerify} className="mt-6 grid gap-4">
+        <form onSubmit={handleVerify} className="mt-6 grid gap-4" noValidate>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Verification Token
-            </label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Verification Token</label>
             <textarea
               value={token}
               onChange={(e) => setToken(e.target.value)}
@@ -105,7 +123,7 @@ const VerifyEmail = () => {
 
         <div className="mt-6">
           <Link to="/resend-verification" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
-            Request a new verification token
+            Need a new token?
           </Link>
         </div>
 

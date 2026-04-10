@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
 const API_BASE = 'http://localhost:5000/api/auth';
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -36,11 +37,38 @@ const ResetPassword = () => {
     }));
   };
 
+  const validateForm = () => {
+    const cleanToken = formData.token.trim();
+
+    if (!cleanToken) {
+      return 'Reset token is required.';
+    }
+
+    if (!formData.password) {
+      return 'New password is required.';
+    }
+
+    if (!PASSWORD_REGEX.test(formData.password)) {
+      return 'Password must be at least 8 characters and include uppercase, lowercase, and a number.';
+    }
+
+    if (!formData.confirmPassword) {
+      return 'Please confirm your new password.';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      return 'The passwords do not match.';
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      showToast('error', 'The passwords do not match');
+    const validationError = validateForm();
+    if (validationError) {
+      showToast('error', validationError);
       return;
     }
 
@@ -50,7 +78,7 @@ const ResetPassword = () => {
       const response = await fetch(`${API_BASE}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: formData.token, password: formData.password }),
+        body: JSON.stringify({ token: formData.token.trim(), password: formData.password }),
       });
 
       const data = await response.json();
@@ -84,7 +112,7 @@ const ResetPassword = () => {
           Enter the reset token and set a new password to restore access to your account.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+        <form onSubmit={handleSubmit} className="mt-6 grid gap-4" noValidate>
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700">Reset Token</label>
             <textarea
@@ -109,6 +137,9 @@ const ResetPassword = () => {
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
               placeholder="Enter a new password"
             />
+            <p className="mt-2 text-xs text-slate-500">
+              Use at least 8 characters with uppercase, lowercase, and a number.
+            </p>
           </div>
 
           <div>
@@ -134,8 +165,8 @@ const ResetPassword = () => {
         </form>
 
         <div className="mt-6">
-          <Link to="/login" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
-            ← Back to Sign In
+          <Link to="/forgot-password" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
+            ← Back to Forgot Password
           </Link>
         </div>
       </div>

@@ -1,21 +1,31 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const path = require('path');
-const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const path = require('path');
+
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const threadRoutes = require('./routes/threadRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
+const helpRequestRoutes = require('./routes/helpRequestRoutes');
+
 const { initSocket } = require('./socket');
-require('dotenv').config();
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-    cors: {
-        origin: ["http://localhost:3000", "http://localhost:5173"],
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        credentials: true,
-    }
+  cors: {
+    origin: 'http://localhost:5173',
+    credentials: true,
+  },
 });
 
 // Initialize socket
@@ -60,30 +70,49 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/threads', require('./routes/threadRoutes'));
-app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
-app.use('/api/resources', require('./routes/resourceRoutes'));
-app.use('/api/request', require('./routes/helpRequestRoutes'));
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('MongoDB successfully connected');
+  })
+  .catch((error) => {
+    console.error('Failed to connect to the Database:', error.message);
+    process.exit(1);
+  });
 
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running' });
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/threads', threadRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin-analytics', adminAnalyticsRoutes);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/request', helpRequestRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({
+    message: `Route not found: ${req.originalUrl}`,
+  });
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
     res.status(204).end();
 });
 
-mongoose
-    .connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log('MongoDB successfully connected');
-        const PORT = process.env.PORT || 5000;
-        server.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
-        });
-    })
-    .catch((err) => {
-        console.log('Failed to connect to the Database:', err.message);
-    });
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal server error',
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
