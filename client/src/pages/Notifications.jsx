@@ -4,7 +4,7 @@ import PanelCard from '../components/PanelCard';
 import Toast from '../components/Toast';
 import { socket } from '../socket';
 
-const API_BASE = 'http://localhost:8000/api/notifications';
+const API_BASE = 'http://localhost:5000/api/notifications';
 
 const getCurrentUser = () => {
   try {

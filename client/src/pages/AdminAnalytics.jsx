@@ -4,7 +4,7 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:5000/api/admin/analytics';
+const API_BASE = 'http://localhost:5000/api/admin-analytics';
 
 const AdminAnalytics = () => {
   const [data, setData] = useState(null);

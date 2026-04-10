@@ -22,11 +22,10 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-    cors: {
-        origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        credentials: true,
-    }
+  cors: {
+    origin: 'http://localhost:5173',
+    credentials: true,
+  },
 });
 
 // Initialize socket
@@ -65,7 +64,7 @@ io.on('connection', (socket) => {
 });
 
 app.use(cors({ 
-    origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
+    origin: ["http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
 }));
@@ -85,30 +84,24 @@ mongoose
     process.exit(1);
   });
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/threads', require('./routes/threadRoutes'));
-app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/admin/analytics', require('./routes/adminAnalyticsRoutes'));
-app.use('/api/resources', require('./routes/resourceRoutes'));
-app.use('/api/request', require('./routes/helpRequestRoutes'));
-
-const peerTutoringRoutes = require('./routes/peerTutoringRoutes');
-app.use('/api/peer-tutoring', peerTutoringRoutes);
-
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
-    res.status(204).end();
-});
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/threads', threadRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin-analytics', adminAnalyticsRoutes);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/request', helpRequestRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
     message: `Route not found: ${req.originalUrl}`,
   });
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+    res.status(204).end();
 });
 
 app.use((err, req, res, next) => {

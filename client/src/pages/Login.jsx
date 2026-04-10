@@ -2,12 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
-<<<<<<< HEAD
 const API_BASE = 'http://localhost:5000/api/auth';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-=======
-const API_BASE = 'http://localhost:8000/api/auth';
->>>>>>> feature-minoli
 
 const Login = () => {
   const navigate = useNavigate();
