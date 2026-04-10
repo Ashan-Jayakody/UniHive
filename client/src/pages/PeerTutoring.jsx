@@ -22,6 +22,7 @@ const PeerTutoring = () => {
     description: "",
     date: "",
     time: "",
+    endTime: "",
     sessionLink: "",
     maxStudents: "",
   };
@@ -42,6 +43,33 @@ const PeerTutoring = () => {
   const [rejectionReasonById, setRejectionReasonById] = useState({});
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [activeParticipantSession, setActiveParticipantSession] = useState(null);
+  const [feedbackFormData, setFeedbackFormData] = useState({ rating: 5, comment: "" });
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [activeFeedbackSessionId, setActiveFeedbackSessionId] = useState(null);
+
+  const getSessionStatus = (date, startTime, endTime) => {
+    if (!date || !startTime || !endTime) return "upcoming";
+
+    try {
+      const now = new Date();
+      const sessionDate = new Date(date);
+      const [startH, startM] = startTime.split(":").map(Number);
+      const [endH, endM] = endTime.split(":").map(Number);
+
+      const startDateTime = new Date(sessionDate);
+      startDateTime.setHours(startH, startM, 0, 0);
+
+      const endDateTime = new Date(sessionDate);
+      endDateTime.setHours(endH, endM, 0, 0);
+
+      if (now < startDateTime) return "upcoming";
+      if (now >= startDateTime && now <= endDateTime) return "active";
+      return "completed";
+    } catch (e) {
+      console.error("Error calculating session status:", e);
+      return "upcoming";
+    }
+  };
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -113,6 +141,7 @@ const PeerTutoring = () => {
       description: session.description || "",
       date: session.date ? new Date(session.date).toISOString().split('T')[0] : "",
       time: session.time || "",
+      endTime: session.endTime || "",
       sessionLink: session.sessionLink || "",
       maxStudents: session.maxStudents ? String(session.maxStudents) : "",
     });
@@ -165,6 +194,32 @@ const PeerTutoring = () => {
     }
   };
 
+  const handleFeedbackSubmit = async (sessionId) => {
+    if (!feedbackFormData.comment.trim()) return;
+    setFeedbackLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/${sessionId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify(feedbackFormData),
+      });
+
+      if (response.ok) {
+        setFeedbackFormData({ rating: 5, comment: "" });
+        setActiveFeedbackSessionId(null);
+        await fetchApprovedSessions();
+        await fetchMySessions();
+      }
+    } catch (error) {
+      console.error('Feedback submission failed', error);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   const validateField = (name, value) => {
     const trimmed = String(value || "").trim();
 
@@ -185,6 +240,9 @@ const PeerTutoring = () => {
       }
       case "time":
         if (!trimmed) return "Session time is required.";
+        return "";
+      case "endTime":
+        if (!trimmed) return "Session end time is required.";
         return "";
       case "sessionLink":
         if (!trimmed) return "Session link is required.";
@@ -258,6 +316,7 @@ const PeerTutoring = () => {
           description: formData.description,
           date: formData.date,
           time: formData.time,
+          endTime: formData.endTime,
           sessionLink: formData.sessionLink,
           maxStudents: formData.maxStudents,
         }),
@@ -549,6 +608,22 @@ const PeerTutoring = () => {
                         />
                         {errors.time && <p className="mt-2 text-xs text-rose-600">{errors.time}</p>}
                       </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="endTime">
+                          End Time
+                        </label>
+                        <input
+                          id="endTime"
+                          name="endTime"
+                          type="time"
+                          value={formData.endTime}
+                          onChange={handleChange}
+                          disabled={submitted}
+                          className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                        />
+                        {errors.endTime && <p className="mt-2 text-xs text-rose-600">{errors.endTime}</p>}
+                      </div>
                     </div>
 
                     <div>
@@ -662,20 +737,43 @@ const PeerTutoring = () => {
                         <div>
                           <h3 className="text-xl font-semibold text-slate-900">{session.moduleName}</h3>
                           <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div className="mt-4 grid gap-3 sm:grid-cols-4">
                             <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
                               <span className="block text-xs uppercase tracking-wide text-slate-400">Date</span>
                               <span className="font-medium text-slate-900">{new Date(session.date).toLocaleDateString()}</span>
                             </div>
                             <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
                               <span className="block text-xs uppercase tracking-wide text-slate-400">Time</span>
-                              <span className="font-medium text-slate-900">{session.time}</span>
+                              <span className="font-medium text-slate-900">{session.time} - {session.endTime}</span>
                             </div>
                             <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
                               <span className="block text-xs uppercase tracking-wide text-slate-400">Status</span>
                               <span className="font-medium text-slate-900">{session.approvalStatus}</span>
                             </div>
+                            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                              <span className="block text-xs uppercase tracking-wide text-slate-400">Registered</span>
+                              <span className="font-medium text-slate-900">{session.participants?.length || 0} students</span>
+                            </div>
                           </div>
+
+                          {session.feedbacks?.length > 0 && (
+                            <div className="mt-6">
+                              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Recent Feedback ({session.feedbacks.length})</p>
+                              <div className="mt-3 grid gap-3">
+                                {session.feedbacks.slice(-3).map((fb, idx) => (
+                                  <div key={idx} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <div className="flex items-center gap-1 text-amber-500">
+                                      {Array.from({ length: 5 }).map((_, i) => (
+                                        <span key={i} className={i < fb.rating ? "text-amber-500" : "text-slate-200"}>★</span>
+                                      ))}
+                                    </div>
+                                    <p className="mt-1 text-sm text-slate-600 italic">"{fb.comment}"</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {session.rejectionReason && (
                             <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                               Rejection reason: {session.rejectionReason}
@@ -686,12 +784,21 @@ const PeerTutoring = () => {
                           </p>
                         </div>
                         <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:w-72">
+                          {session.approvalStatus === 'approved' && getSessionStatus(session.date, session.time, session.endTime) === 'active' && (
+                            <button
+                              type="button"
+                              onClick={() => window.open(session.sessionLink, '_blank', 'noopener,noreferrer')}
+                              className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                            >
+                              Start session
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleShowParticipants(session)}
                             className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
                           >
-                            Creator info
+                            Participants info
                           </button>
                           <button
                             type="button"
@@ -726,41 +833,135 @@ const PeerTutoring = () => {
                 </div>
               ) : (
                 <div className="grid gap-6">
-                  {approvedSessions.map((session) => (
-                    <div key={session._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div>
-                          <h3 className="text-xl font-semibold text-slate-900">{session.moduleName}</h3>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                              <span className="block text-xs uppercase tracking-wide text-slate-400">Date</span>
-                              <span className="font-medium text-slate-900">{new Date(session.date).toLocaleDateString()}</span>
+                    {approvedSessions.map((session) => (
+                      <div key={session._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <h3 className="text-xl font-semibold text-slate-900">{session.moduleName}</h3>
+                            <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                                <span className="block text-xs uppercase tracking-wide text-slate-400">Date</span>
+                                <span className="font-medium text-slate-900">{new Date(session.date).toLocaleDateString()}</span>
+                              </div>
+                              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                                <span className="block text-xs uppercase tracking-wide text-slate-400">Time</span>
+                                <span className="font-medium text-slate-900">{session.time} - {session.endTime}</span>
+                              </div>
+                              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                                <span className="block text-xs uppercase tracking-wide text-slate-400">Capacity</span>
+                                <span className="font-medium text-slate-900">{session.maxStudents} students</span>
+                              </div>
+                              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                                <span className="block text-xs uppercase tracking-wide text-slate-400">Joined</span>
+                                <span className="font-medium text-slate-900">{session.participants?.length || 0} students</span>
+                              </div>
                             </div>
-                            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                              <span className="block text-xs uppercase tracking-wide text-slate-400">Time</span>
-                              <span className="font-medium text-slate-900">{session.time}</span>
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                              <span className="block text-xs uppercase tracking-wide text-slate-400">Capacity</span>
-                              <span className="font-medium text-slate-900">{session.maxStudents} students</span>
-                            </div>
+
+                            {/* Feedback Form for joined users during active or completed sessions */}
+                            {session.participants?.some(p => (p._id || p) === user?._id) && 
+                             activeFeedbackSessionId === session._id && (
+                              <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5">
+                                <h4 className="text-sm font-semibold text-indigo-900">
+                                  {getSessionStatus(session.date, session.time, session.endTime) === 'active' 
+                                    ? "Session in progress: Leave your feedback" 
+                                    : "Session completed: Share your experience"}
+                                </h4>
+                                <div className="mt-3 flex items-center gap-2">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      onClick={() => setFeedbackFormData(prev => ({ ...prev, rating: star }))}
+                                      className="text-2xl transition hover:scale-110"
+                                    >
+                                      <span className={star <= feedbackFormData.rating ? "text-amber-500" : "text-slate-300"}>★</span>
+                                    </button>
+                                  ))}
+                                </div>
+                                <textarea
+                                  placeholder="What did you think of this session?"
+                                  value={feedbackFormData.comment}
+                                  onChange={(e) => setFeedbackFormData(prev => ({ ...prev, comment: e.target.value }))}
+                                  className="mt-3 w-full rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
+                                  rows={2}
+                                />
+                                <div className="mt-3 flex gap-2">
+                                  <button
+                                    onClick={() => handleFeedbackSubmit(session._id)}
+                                    disabled={feedbackLoading || !feedbackFormData.comment.trim()}
+                                    className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:bg-slate-300"
+                                  >
+                                    {feedbackLoading ? "Submitting..." : "Submit Feedback"}
+                                  </button>
+                                  <button
+                                    onClick={() => setActiveFeedbackSessionId(null)}
+                                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:w-72">
+                            {(() => {
+                              const status = getSessionStatus(session.date, session.time, session.endTime);
+                              const isJoined = session.participants?.some((p) => (p._id || p) === user?._id);
+                              const alreadyHasFeedback = session.feedbacks?.some(fb => (fb.user?._id || fb.user) === user?._id);
+
+                              if (status === 'completed') {
+                                if (isJoined) {
+                                  if (alreadyHasFeedback) {
+                                    return (
+                                      <button disabled className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-400">
+                                        Feedback submitted
+                                      </button>
+                                    );
+                                  }
+                                  return (
+                                    <button
+                                      onClick={() => {
+                                        setActiveFeedbackSessionId(session._id === activeFeedbackSessionId ? null : session._id);
+                                        setFeedbackFormData({ rating: 5, comment: "" });
+                                      }}
+                                      className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                                    >
+                                      Give feedback
+                                    </button>
+                                  );
+                                }
+                                return (
+                                  <button disabled className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-400">
+                                    Session ended
+                                  </button>
+                                );
+                              }
+
+                              // Status is active or upcoming
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isJoined) {
+                                      window.open(session.sessionLink, '_blank', 'noopener,noreferrer');
+                                    } else {
+                                      handleJoinSession(session._id);
+                                    }
+                                  }}
+                                  className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+                                    isJoined
+                                      ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                      : "border border-indigo-600 bg-white text-indigo-700 hover:bg-indigo-50"
+                                  }`}
+                                >
+                                  {isJoined ? "Join session" : "Join session"}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </div>
-                        <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:w-72">
-                          {!session.participants?.some((participant) => participant === user?._id || participant?._id === user?._id) && (
-                            <button
-                              type="button"
-                              onClick={() => handleJoinSession(session._id)}
-                              className="inline-flex items-center justify-center rounded-2xl border border-indigo-600 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                            >
-                              Join session
-                            </button>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </section>

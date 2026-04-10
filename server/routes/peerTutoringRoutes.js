@@ -12,6 +12,7 @@ const {
   updatePeerTutoringSession,
   deletePeerTutoringSession,
   joinPeerTutoringSession,
+  addFeedback,
 } = require('../controllers/peerTutoringController');
 
 router.get('/', protect, getPeerTutoringSessions);
@@ -21,6 +22,7 @@ router.get('/all', protect, authorize('admin'), getAllPeerTutoringSessions);
 router.post('/', protect, createPeerTutoringSession);
 router.put('/:id', protect, updatePeerTutoringSession);
 router.post('/:id/join', protect, joinPeerTutoringSession);
+router.post('/:id/feedback', protect, addFeedback);
 router.delete('/:id', protect, deletePeerTutoringSession);
 router.put('/:id/approve', protect, authorize('admin'), approvePeerTutoringSession);
 router.put('/:id/reject', protect, authorize('admin'), rejectPeerTutoringSession);

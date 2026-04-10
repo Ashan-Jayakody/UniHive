@@ -26,7 +26,7 @@ const emitNotificationToUser = (userId, notification) => {
   }
 };
 
-const validateSessionPayload = ({ moduleName, description, date, time, sessionLink, maxStudents }) => {
+const validateSessionPayload = ({ moduleName, description, date, time, endTime, sessionLink, maxStudents }) => {
   const errors = {};
   let normalizedDate = null;
 
@@ -52,6 +52,10 @@ const validateSessionPayload = ({ moduleName, description, date, time, sessionLi
     errors.time = 'A valid session time is required.';
   }
 
+  if (!endTime || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(endTime)) {
+    errors.endTime = 'A valid session end time is required.';
+  }
+
   if (!sessionLink || !String(sessionLink).trim()) {
     errors.sessionLink = 'Session link is required.';
   } else if (!isValidUrl(sessionLink)) {
@@ -70,12 +74,13 @@ const validateSessionPayload = ({ moduleName, description, date, time, sessionLi
 
 const createPeerTutoringSession = async (req, res) => {
   try {
-    const { moduleName, description, date, time, sessionLink, maxStudents } = req.body;
+    const { moduleName, description, date, time, endTime, sessionLink, maxStudents } = req.body;
     const { errors, normalizedDate, maxCount } = validateSessionPayload({
       moduleName,
       description,
       date,
       time,
+      endTime,
       sessionLink,
       maxStudents,
     });
@@ -104,6 +109,7 @@ const createPeerTutoringSession = async (req, res) => {
       description: String(description).trim(),
       date: normalizedDate,
       time,
+      endTime,
       sessionLink: String(sessionLink).trim(),
       maxStudents: maxCount,
       approvalStatus: 'pending',
@@ -130,7 +136,10 @@ const createPeerTutoringSession = async (req, res) => {
 
 const getPeerTutoringSessions = async (req, res) => {
   try {
-    const sessions = await PeerTutoringSession.find({ approvalStatus: 'approved' })
+    const sessions = await PeerTutoringSession.find({
+      approvalStatus: 'approved',
+      creator: { $ne: req.user._id },
+    })
       .populate('creator', 'name email role')
       .populate('participants', 'name email')
       .sort({ date: 1, time: 1 });
@@ -216,6 +225,10 @@ const joinPeerTutoringSession = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You can only join approved sessions.' });
     }
 
+    if (session.creator.toString() === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot join your own session.' });
+    }
+
     if (session.participants.some((participant) => participant.toString() === req.user._id.toString())) {
       return res.status(200).json({ success: true, message: 'You are already joined to this session.', session });
     }
@@ -273,7 +286,7 @@ const rejectPeerTutoringSession = async (req, res) => {
 const updatePeerTutoringSession = async (req, res) => {
   try {
     const { id } = req.params;
-    const { moduleName, description, date, time, sessionLink, maxStudents } = req.body;
+    const { moduleName, description, date, time, endTime, sessionLink, maxStudents } = req.body;
     const session = await PeerTutoringSession.findById(id);
 
     if (!session) {
@@ -289,6 +302,7 @@ const updatePeerTutoringSession = async (req, res) => {
       description,
       date,
       time,
+      endTime,
       sessionLink,
       maxStudents,
     });
@@ -316,6 +330,7 @@ const updatePeerTutoringSession = async (req, res) => {
     session.description = String(description).trim();
     session.date = normalizedDate;
     session.time = time;
+    session.endTime = endTime;
     session.sessionLink = String(sessionLink).trim();
     session.maxStudents = maxCount;
     session.approvalStatus = 'pending';
@@ -368,6 +383,38 @@ const getMyPeerTutoringSessions = async (req, res) => {
   }
 };
 
+const addFeedback = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { comment, rating } = req.body;
+    const session = await PeerTutoringSession.findById(id);
+
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Session not found.' });
+    }
+
+    if (!session.participants.some((p) => p.toString() === req.user._id.toString())) {
+      return res.status(403).json({ success: false, message: 'Only participants can leave feedback.' });
+    }
+
+    if (session.feedbacks.some((fb) => fb.user.toString() === req.user._id.toString())) {
+      return res.status(400).json({ success: false, message: 'You have already submitted feedback for this session.' });
+    }
+
+    session.feedbacks.push({
+      user: req.user._id,
+      comment: String(comment).trim(),
+      rating: Number(rating),
+    });
+
+    await session.save();
+    return res.status(200).json({ success: true, session });
+  } catch (error) {
+    console.error('Add feedback error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to add feedback.' });
+  }
+};
+
 module.exports = {
   createPeerTutoringSession,
   getPeerTutoringSessions,
@@ -379,4 +426,5 @@ module.exports = {
   deletePeerTutoringSession,
   getMyPeerTutoringSessions,
   joinPeerTutoringSession,
+  addFeedback,
 };

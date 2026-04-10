@@ -26,6 +26,11 @@ const peerTutoringSessionSchema = new mongoose.Schema(
       required: [true, 'Time is required'],
       trim: true,
     },
+    endTime: {
+      type: String,
+      required: [true, 'End time is required'],
+      trim: true,
+    },
     sessionLink: {
       type: String,
       required: [true, 'Session link is required'],
@@ -40,6 +45,14 @@ const peerTutoringSessionSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
+      },
+    ],
+    feedbacks: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        comment: { type: String, trim: true },
+        rating: { type: Number, min: 1, max: 5 },
+        createdAt: { type: Date, default: Date.now },
       },
     ],
     approvalStatus: {
