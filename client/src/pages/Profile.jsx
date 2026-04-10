@@ -10,7 +10,9 @@ const THREAD_API_BASE = 'http://localhost:5000/api/threads';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s'.-]{1,99}$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+
+// Keep selected image smaller so base64 stays comfortably under backend limit
+const MAX_AVATAR_SIZE = 1 * 1024 * 1024; // 1 MB
 
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -265,7 +267,7 @@ const Profile = () => {
     }
 
     if (file.size > MAX_AVATAR_SIZE) {
-      showToast('error', 'Image size must be 2 MB or less');
+      showToast('error', 'Image size must be 1 MB or less');
       return;
     }
 
@@ -273,11 +275,21 @@ const Profile = () => {
 
     reader.onloadend = () => {
       const base64String = reader.result;
+
+      if (typeof base64String !== 'string' || !base64String.startsWith('data:image/')) {
+        showToast('error', 'Failed to process selected image');
+        return;
+      }
+
       setAvatarPreview(base64String);
       setFormData((prev) => ({
         ...prev,
         avatar: base64String,
       }));
+    };
+
+    reader.onerror = () => {
+      showToast('error', 'Failed to read image file');
     };
 
     reader.readAsDataURL(file);

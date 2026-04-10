@@ -179,11 +179,19 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const incomingAvatar = req.body.avatar ?? user.avatar ?? '';
+
+    if (typeof incomingAvatar === 'string' && incomingAvatar.length > 6 * 1024 * 1024) {
+      return res.status(400).json({
+        message: 'Avatar image is too large. Please upload a smaller image.',
+      });
+    }
+
     const payload = {
       name: sanitizeText(req.body.name ?? user.name),
       email: normalizeEmail(req.body.email ?? user.email),
       password: typeof req.body.password === 'string' ? req.body.password : '',
-      avatar: req.body.avatar ?? user.avatar ?? '',
+      avatar: incomingAvatar,
       expertiseAreas: parseExpertiseAreas(
         req.body.expertiseAreas ?? user.expertiseAreas ?? []
       ),
