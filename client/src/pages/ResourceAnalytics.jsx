@@ -3,7 +3,7 @@ import Toast from '../components/Toast';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:5000/api/resources/analytics';
+const API_BASE = 'http://localhost:8000/api/resources/analytics';
 
 const ResourceAnalytics = () => {
   const [loading, setLoading] = useState(true);
