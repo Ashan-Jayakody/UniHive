@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API_BASE = "http://localhost:8000/api/resources";
+const API_BASE = "http://localhost:5000/api/resources";
 const CATEGORIES = ["Notes", "Videos", "Research Papers", "Links"];
 
 const getCurrentUser = () => {
@@ -116,7 +116,7 @@ const ResourceShare = () => {
 
     if (value.startsWith("uploaded://")) {
       const fileName = value.replace("uploaded://", "");
-      return "http://localhost:8000/uploads/resources/" + encodeURIComponent(fileName);
+      return "http://localhost:5000/uploads/resources/" + encodeURIComponent(fileName);
     }
 
     if (value.startsWith("http://") || value.startsWith("https://")) {

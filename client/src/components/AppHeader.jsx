@@ -15,7 +15,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-const NOTIFICATION_API = 'http://localhost:8000/api/notifications';
+const NOTIFICATION_API = 'http://localhost:5000/api/notifications';
 
 const getCurrentUser = () => {
   try {
@@ -318,7 +318,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
               to="/helpboard"
               label="Help Exchange"
               active={activePath === '/helpboard'}
-              badge={unreadCount > 0 ? unreadCount : null}
             >
               <LifeBuoy size={15} strokeWidth={1.5} />
             </SidebarLink>

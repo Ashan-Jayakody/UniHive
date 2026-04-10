@@ -2,14 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
-<<<<<<< HEAD
 const API_BASE = 'http://localhost:5000/api/auth';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s'.-]{1,99}$/;
-=======
-const API_BASE = 'http://localhost:8000/api/auth';
->>>>>>> feature-minoli
 
 const facultyOptions = ['Computing', 'Engineering', 'Business', 'Humanities'];
 
@@ -418,15 +414,6 @@ const Register = () => {
                 <p className="font-semibold text-slate-700">Administrator account configuration</p>
                 <p className="mt-2">
                   Administrator accounts do not require faculty, course, or academic year details during registration.
-                </p>
-              </div>
-            )}
-
-            {verificationToken && (
-              <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm text-green-700">
-                <p className="font-semibold">Verification token generated successfully.</p>
-                <p className="mt-2 break-all">
-                  Token: <span className="font-mono">{verificationToken}</span>
                 </p>
               </div>
             )}
