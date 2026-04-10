@@ -96,12 +96,14 @@ app.use('/api/admin-analytics', adminAnalyticsRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/request', helpRequestRoutes);
 
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+  res.status(204).end();
+});
+
 app.use((req, res) => {
   res.status(404).json({
     message: `Route not found: ${req.originalUrl}`,
   });
-app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
-    res.status(204).end();
 });
 
 app.use((err, req, res, next) => {
