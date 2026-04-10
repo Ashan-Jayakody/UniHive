@@ -6,6 +6,14 @@ import ChatRoom from "./ChatRoom";
 
 const HelpBoard = () => {
     const navigate = useNavigate();
+  const currentUser = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,6 +58,15 @@ const HelpBoard = () => {
 
   // click offer help button
   const handleOfferHelp = async (requestId) => {
+    const targetRequest = requests.find((req) => req._id === requestId);
+    const isOwnRequest =
+      String(targetRequest?.requester?._id || "") === String(currentUser?._id || "");
+
+    if (isOwnRequest) {
+      alert("You cannot offer help on your own request.");
+      return;
+    }
+
     setActionLoading(requestId);
     try {
       const token = localStorage.getItem("token");
@@ -430,12 +447,17 @@ const HelpBoard = () => {
                 </div>
                 <button
                   onClick={() => handleOfferHelp(req._id)}
-                  disabled={actionLoading === req._id}
+                  disabled={
+                    actionLoading === req._id ||
+                    String(req.requester?._id || "") === String(currentUser?._id || "")
+                  }
                   className="flex items-center gap-1.5 px-5 py-1.5 text-white text-sm font-medium rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 shadow-sm"
                 >
                   {actionLoading === req._id
                     ? "Locking Request..."
-                    : "Offer Help"}
+                    : String(req.requester?._id || "") === String(currentUser?._id || "")
+                      ? "Your Request"
+                      : "Offer Help"}
                 </button>
               </div>
             </div>

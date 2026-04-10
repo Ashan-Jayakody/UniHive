@@ -1,12 +1,32 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:5000/api/admin-analytics';
+const DEFAULT_API_ORIGIN = 'http://localhost:5000';
+
+const buildAdminAnalyticsUrl = () => {
+  const rawBase = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_ORIGIN).trim();
+
+  // If someone provides a relative base (e.g. "/api"), resolve it against
+  // the current origin first so fetch always receives a full endpoint.
+  const absoluteBase = /^https?:\/\//i.test(rawBase)
+    ? rawBase
+    : new URL(rawBase || '/', window.location.origin).toString();
+
+  const normalizedBase = absoluteBase.replace(/\/+$/, '');
+
+  if (normalizedBase.endsWith('/api')) {
+    return `${normalizedBase}/admin-analytics`;
+  }
+
+  return `${normalizedBase}/api/admin-analytics`;
+};
 
 const AdminAnalytics = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +54,9 @@ const AdminAnalytics = () => {
 
       const token = localStorage.getItem('token');
 
-      const response = await fetch(API_BASE, {
+      const endpoint = buildAdminAnalyticsUrl();
+
+      const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -46,12 +68,21 @@ const AdminAnalytics = () => {
       const text = await response.text();
 
       if (!contentType.includes('application/json')) {
-        throw new Error(`Server returned non-JSON response. Preview: ${text.slice(0, 120)}`);
+        throw new Error(
+          `Server returned non-JSON response from ${response.url || endpoint}. Preview: ${text.slice(0, 120)}`,
+        );
       }
 
       const result = JSON.parse(text);
 
       if (!response.ok) {
+        if (response.status === 401 || result.message === 'User not found') {
+          localStorage.removeItem('token');
+          showToast('error', 'Your session is invalid or expired. Please sign in again.');
+          navigate('/login');
+          return;
+        }
+
         throw new Error(result.message || 'Failed to load administrative analytics');
       }
 

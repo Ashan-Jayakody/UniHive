@@ -418,15 +418,6 @@ const Register = () => {
               </div>
             )}
 
-            {verificationToken && (
-              <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm text-green-700">
-                <p className="font-semibold">Verification token generated successfully.</p>
-                <p className="mt-2 break-all">
-                  Token: <span className="font-mono">{verificationToken}</span>
-                </p>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
