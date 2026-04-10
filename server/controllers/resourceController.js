@@ -1,5 +1,6 @@
-
 const Resource = require('../models/Resource');
+const Notification = require('../models/Notification');
+const { getIO } = require('../socket');
 
 const ALLOWED_CATEGORIES = ['Notes', 'Videos', 'Research Papers', 'Links'];
 const ALLOWED_STATUSES = ['pending', 'approved', 'rejected'];
@@ -17,8 +18,13 @@ const parsePositiveInt = (value, fallback) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-
-
+const emitNotificationToUser = (userId, notification) => {
+  try {
+    getIO().to(`user:${userId}`).emit('notification:new', notification);
+  } catch (error) {
+    console.error('emitNotificationToUser error:', error.message);
+  }
+};
 
 const sanitizeSortBy = (value) =>
   ALLOWED_SORT_FIELDS.includes(value) ? value : 'createdAt';
@@ -31,6 +37,30 @@ const buildUploadDateRange = (uploadDate) => {
   const end = new Date(`${uploadDate}T23:59:59.999Z`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
   return { $gte: start, $lte: end };
+};
+
+const isVideoMimeType = (mimeType = '') =>
+  String(mimeType).toLowerCase().startsWith('video/');
+
+const isAllowedNotesMimeType = (mimeType = '') => {
+  const value = String(mimeType).toLowerCase().trim();
+  return value === 'image/png' || value === 'application/pdf';
+};
+
+const isLikelyNotesFileUrl = (url = '') => {
+  const value = String(url).trim().toLowerCase();
+  if (!value) return false;
+  return /\.(png|pdf)(\?.*)?$/i.test(value);
+};
+
+const isLikelyVideoUrl = (url = '') => {
+  const value = String(url).trim().toLowerCase();
+  if (!value) return false;
+
+  const directVideoExtPattern = /\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?.*)?$/i;
+  if (directVideoExtPattern.test(value)) return true;
+
+  return /(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com)/i.test(value);
 };
 
 // POST -> localhost:5000/api/resources
@@ -49,13 +79,82 @@ exports.createResource = async (req, res) => {
 
     // support multipart uploads if req.file exists
     const resolvedFileUrl = req.file
-  ? req.protocol + "://" + req.get("host") + "/uploads/resources/" + req.file.filename
-  : (fileUrl || "");
-    const resolvedMimeType = req.file ? req.file.mimetype : (mimeType || '');
+      ? req.protocol + '://' + req.get('host') + '/uploads/resources/' + req.file.filename
+      : (fileUrl || '').trim();
+    const resolvedMimeType = req.file ? req.file.mimetype : (mimeType || '').trim();
     const resolvedSize = req.file ? req.file.size : Number(size || 0);
+    const trimmedLinkUrl = (linkUrl || '').trim();
 
-    if (!resolvedFileUrl && !linkUrl) {
+    if (!resolvedFileUrl && !trimmedLinkUrl) {
       return sendError(res, 400, 'Either fileUrl or linkUrl is required');
+    }
+
+    if (category === 'Videos') {
+      if (req.file && !isVideoMimeType(resolvedMimeType)) {
+        return sendError(res, 400, 'For Videos category, only video files are allowed');
+      }
+
+      if (trimmedLinkUrl && !isLikelyVideoUrl(trimmedLinkUrl)) {
+        return sendError(res, 400, 'For Videos category, linkUrl must be a valid video link');
+      }
+
+      if (!req.file && resolvedFileUrl && resolvedMimeType && !isVideoMimeType(resolvedMimeType)) {
+        return sendError(res, 400, 'For Videos category, file mimeType must be video/*');
+      }
+
+      if (!req.file && resolvedFileUrl && !resolvedMimeType && !isLikelyVideoUrl(resolvedFileUrl)) {
+        return sendError(res, 400, 'For Videos category, fileUrl must be a valid video URL');
+      }
+    }
+
+    if (category === 'Links') {
+      if (req.file || resolvedFileUrl) {
+        return sendError(res, 400, 'For Links category, only linkUrl is allowed. File uploads are not allowed');
+      }
+
+      if (!trimmedLinkUrl) {
+        return sendError(res, 400, 'For Links category, linkUrl is required');
+      }
+    }
+
+    if (category === 'Notes') {
+      if (req.file && !isAllowedNotesMimeType(resolvedMimeType)) {
+        return sendError(res, 400, 'For Notes category, only PNG and PDF files are allowed');
+      }
+
+      if (trimmedLinkUrl && !isLikelyNotesFileUrl(trimmedLinkUrl)) {
+        return sendError(res, 400, 'For Notes category, linkUrl must point to a .png or .pdf file');
+      }
+
+      if (!req.file && resolvedFileUrl) {
+        if (resolvedMimeType && !isAllowedNotesMimeType(resolvedMimeType)) {
+          return sendError(res, 400, 'For Notes category, file mimeType must be image/png or application/pdf');
+        }
+
+        if (!resolvedMimeType && !isLikelyNotesFileUrl(resolvedFileUrl)) {
+          return sendError(res, 400, 'For Notes category, fileUrl must point to a .png or .pdf file');
+        }
+      }
+    }
+
+    if (category === 'Research Papers') {
+      if (req.file && isVideoMimeType(resolvedMimeType)) {
+        return sendError(res, 400, 'For Research Papers category, video files are not allowed');
+      }
+
+      if (trimmedLinkUrl && isLikelyVideoUrl(trimmedLinkUrl)) {
+        return sendError(res, 400, 'For Research Papers category, video links are not allowed');
+      }
+
+      if (!req.file && resolvedFileUrl) {
+        if (resolvedMimeType && isVideoMimeType(resolvedMimeType)) {
+          return sendError(res, 400, 'For Research Papers category, file mimeType cannot be video/*');
+        }
+
+        if (!resolvedMimeType && isLikelyVideoUrl(resolvedFileUrl)) {
+          return sendError(res, 400, 'For Research Papers category, fileUrl cannot be a video link');
+        }
+      }
     }
 
     const resource = await Resource.create({
@@ -66,7 +165,7 @@ exports.createResource = async (req, res) => {
       module: (module || '').trim(),
       uploader: req.user._id,
       fileUrl: resolvedFileUrl,
-      linkUrl: (linkUrl || '').trim(),
+      linkUrl: trimmedLinkUrl,
       mimeType: resolvedMimeType,
       size: Number.isFinite(resolvedSize) ? resolvedSize : 0,
       approvalStatus: 'pending',
@@ -108,12 +207,80 @@ exports.updateOwnResource = async (req, res) => {
       return sendError(res, 400, 'Invalid category');
     }
 
-    if (!resource.title || !resource.subject || !resource.category) {
+    if (!String(resource.title || '').trim() || !String(resource.subject || '').trim() || !String(resource.category || '').trim()) {
       return sendError(res, 400, 'title, category, and subject are required');
     }
 
-    if (!resource.fileUrl && !resource.linkUrl) {
+    if (!String(resource.fileUrl || '').trim() && !String(resource.linkUrl || '').trim()) {
       return sendError(res, 400, 'Either fileUrl or linkUrl is required');
+    }
+
+    if (resource.category === 'Videos') {
+      const currentMimeType = String(resource.mimeType || '').trim();
+      const currentLinkUrl = String(resource.linkUrl || '').trim();
+      const currentFileUrl = String(resource.fileUrl || '').trim();
+      const hasFileUrl = Boolean(String(resource.fileUrl || '').trim());
+
+      if (hasFileUrl && currentMimeType && !isVideoMimeType(currentMimeType)) {
+        return sendError(res, 400, 'For Videos category, file mimeType must be video/*');
+      }
+
+      if (currentLinkUrl && !isLikelyVideoUrl(currentLinkUrl)) {
+        return sendError(res, 400, 'For Videos category, linkUrl must be a valid video link');
+      }
+
+      if (hasFileUrl && !currentMimeType && !isLikelyVideoUrl(currentFileUrl)) {
+        return sendError(res, 400, 'For Videos category, fileUrl must be a valid video URL');
+      }
+    }
+
+    if (resource.category === 'Links') {
+      const currentLinkUrl = String(resource.linkUrl || '').trim();
+      const hasFileUrl = Boolean(String(resource.fileUrl || '').trim());
+
+      if (hasFileUrl) {
+        return sendError(res, 400, 'For Links category, only linkUrl is allowed. File uploads are not allowed');
+      }
+
+      if (!currentLinkUrl) {
+        return sendError(res, 400, 'For Links category, linkUrl is required');
+      }
+    }
+
+    if (resource.category === 'Notes') {
+      const currentMimeType = String(resource.mimeType || '').trim();
+      const currentLinkUrl = String(resource.linkUrl || '').trim();
+      const currentFileUrl = String(resource.fileUrl || '').trim();
+
+      if (currentMimeType && !isAllowedNotesMimeType(currentMimeType)) {
+        return sendError(res, 400, 'For Notes category, file mimeType must be image/png or application/pdf');
+      }
+
+      if (currentLinkUrl && !isLikelyNotesFileUrl(currentLinkUrl)) {
+        return sendError(res, 400, 'For Notes category, linkUrl must point to a .png or .pdf file');
+      }
+
+      if (currentFileUrl && !currentMimeType && !isLikelyNotesFileUrl(currentFileUrl)) {
+        return sendError(res, 400, 'For Notes category, fileUrl must point to a .png or .pdf file');
+      }
+    }
+
+    if (resource.category === 'Research Papers') {
+      const currentMimeType = String(resource.mimeType || '').trim();
+      const currentLinkUrl = String(resource.linkUrl || '').trim();
+      const currentFileUrl = String(resource.fileUrl || '').trim();
+
+      if (currentMimeType && isVideoMimeType(currentMimeType)) {
+        return sendError(res, 400, 'For Research Papers category, file mimeType cannot be video/*');
+      }
+
+      if (currentLinkUrl && isLikelyVideoUrl(currentLinkUrl)) {
+        return sendError(res, 400, 'For Research Papers category, video links are not allowed');
+      }
+
+      if (currentFileUrl && !currentMimeType && isLikelyVideoUrl(currentFileUrl)) {
+        return sendError(res, 400, 'For Research Papers category, fileUrl cannot be a video link');
+      }
     }
 
     // force re-review after edit
@@ -300,6 +467,16 @@ exports.approveResource = async (req, res) => {
 
     await resource.save();
 
+    const notification = await Notification.create({
+      user: resource.uploader,
+      title: 'Resource Approved',
+      message: `Your resource "${resource.title}" has been approved and is now visible.`,
+      type: 'success',
+      read: false,
+    });
+
+    emitNotificationToUser(resource.uploader, notification);
+
     return res.status(200).json({
       success: true,
       message: 'Resource approved',
@@ -323,9 +500,22 @@ exports.rejectResource = async (req, res) => {
     resource.approvalStatus = 'rejected';
     resource.reviewer = req.user._id;
     resource.reviewedAt = new Date();
-    resource.rejectionReason = String(rejectionReason).trim();
+    const trimmedRejectionReason = String(rejectionReason).trim();
+    resource.rejectionReason = trimmedRejectionReason;
 
     await resource.save();
+
+    const notification = await Notification.create({
+      user: resource.uploader,
+      title: 'Resource Rejected',
+      message: trimmedRejectionReason
+        ? `Your resource "${resource.title}" was rejected. Reason: ${trimmedRejectionReason}`
+        : `Your resource "${resource.title}" was rejected. Please review and resubmit.`,
+      type: 'warning',
+      read: false,
+    });
+
+    emitNotificationToUser(resource.uploader, notification);
 
     return res.status(200).json({
       success: true,

@@ -28,14 +28,46 @@ const io = new Server(server, {
   },
 });
 
+// Initialize socket
 initSocket(io);
 
-app.use(
-  cors({
-    origin: 'http://localhost:5173',
+// Make io available in routes
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
+// Socket events
+io.on('connection', (socket) => {
+    console.log(`User connected via Socket: ${socket.id}`);
+
+    // User Room
+    socket.on('join-user-room', (userId) => {
+        if (userId) {
+            socket.join(`user:${userId}`);
+        }
+    });
+
+    // Help Request Room
+    socket.on('join_request_room', (requestId) => {
+        socket.join(`help:${requestId}`);
+        console.log(`User ${socket.id} joined help request room: ${requestId}`);
+    });
+
+    socket.on('send_message', (data) => {
+        socket.to(`help:${data.requestId}`).emit('receive_message', data);
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`User Disconnected: ${socket.id}`);
+    });
+});
+
+app.use(cors({ 
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
-  })
-);
+}));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -68,6 +100,8 @@ app.use((req, res) => {
   res.status(404).json({
     message: `Route not found: ${req.originalUrl}`,
   });
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+    res.status(204).end();
 });
 
 app.use((err, req, res, next) => {

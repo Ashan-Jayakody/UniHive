@@ -1,5 +1,6 @@
 // server/routes/resourceRoutes.js
 const express = require('express');
+const { getResourceAnalytics } = require('../controllers/resourceAnalyticsController');
 const router = express.Router();
 const uploadResourceFile = (req, res, next) => {
   upload.single('resourceFile')(req, res, (err) => {
@@ -46,6 +47,7 @@ router.use(protect);
 
 // student routes
 router.post('/', authorize('student'), uploadResourceFile, createResource);
+router.get('/analytics', authorize('faculty', 'admin'), getResourceAnalytics);
 router.get('/mine', authorize('student'), getOwnResources);
 router.put('/:id', authorize('student'), updateOwnResource);
 router.delete('/:id', authorize('student'), deleteOwnResource);

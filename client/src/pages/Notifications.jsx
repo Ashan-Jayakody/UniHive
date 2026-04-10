@@ -6,21 +6,43 @@ import { socket } from '../socket';
 
 const API_BASE = 'http://localhost:5000/api/notifications';
 
-const TYPE_OPTIONS = [
-  { value: 'all', label: 'All Types' },
-  { value: 'success', label: 'Success' },
-  { value: 'info', label: 'Information' },
-  { value: 'warning', label: 'Warning' },
-  { value: 'error', label: 'Error' },
-];
+const getCurrentUser = () => {
+  try {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      return {
+        ...parsed,
+        _id: parsed._id || parsed.id || '',
+      };
+    }
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'read', label: 'Read' },
-  { value: 'unread', label: 'Unread' },
-];
+    const token = localStorage.getItem('token');
+    if (!token) return null;
 
-const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      _id: payload._id || payload.id || '',
+      name: payload.name || 'User',
+      email: payload.email || '',
+      role: payload.role || '',
+    };
+  } catch {
+    return null;
+  }
+};
+
+const parseApiResponse = async (response) => {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    message: text || 'Server returned a non-JSON response',
+  };
+};
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -45,13 +67,8 @@ const Notifications = () => {
     type: '',
   });
 
-  const [toast, setToast] = useState({
-    show: false,
-    type: 'success',
-    message: '',
-  });
-
-  const token = localStorage.getItem('token');
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?._id || currentUser?.id || '';
 
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
@@ -86,15 +103,45 @@ const Notifications = () => {
   };
 
   useEffect(() => {
-    if (!token) return;
-    fetchNotifications();
-  }, [token]);
+    const loadNotifications = async () => {
+      try {
+        setLoading(true);
+
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(API_BASE, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await parseApiResponse(response);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Unable to load notifications');
+        }
+
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch (error) {
+        showToast('error', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
+  }, []);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (user?._id) {
-      socket.emit('join', user._id);
-    }
+    if (!currentUserId) return;
+
+    const joinUserRoom = () => {
+      socket.emit('join-user-room', currentUserId);
+    };
+
+    joinUserRoom();
+    socket.on('connect', joinUserRoom);
 
     const handleNew = (notification) => {
       setNotifications((prev) => [notification, ...prev]);
@@ -122,33 +169,61 @@ const Notifications = () => {
     socket.on('notification:deleted', handleDeleted);
 
     return () => {
-      socket.off('notification:new', handleNew);
-      socket.off('notification:updated', handleUpdated);
-      socket.off('notification:all-read', handleAllRead);
-      socket.off('notification:deleted', handleDeleted);
+      socket.off('connect', joinUserRoom);
+      socket.off('notification:new', onNew);
+      socket.off('notification:updated', onUpdated);
+      socket.off('notification:all-read', onAllRead);
+      socket.off('notification:deleted', onDeleted);
     };
-  }, []);
+  }, [currentUserId]);
 
-  const getFieldError = (name, value) => {
-    const cleanValue = sanitizeText(value);
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter((item) => {
+      const matchesSearch =
+        !searchTerm.trim() ||
+        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.message?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (name === 'title') {
-      if (!cleanValue) return 'Notification title is required.';
-      if (cleanValue.length < 3) return 'Title must be at least 3 characters.';
-      if (cleanValue.length > 120) return 'Title must be 120 characters or less.';
-    }
+      const matchesType = typeFilter === 'all' || item.type === typeFilter;
 
-    if (name === 'message') {
-      if (!cleanValue) return 'Notification message is required.';
-      if (cleanValue.length < 5) return 'Message must be at least 5 characters.';
-      if (cleanValue.length > 1000) return 'Message must be 1000 characters or less.';
-    }
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'read' && item.read) ||
+        (statusFilter === 'unread' && !item.read);
 
-    if (name === 'type') {
-      if (!['success', 'info', 'warning', 'error'].includes(value)) {
-        return 'Please select a valid notification type.';
-      }
-    }
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [notifications, searchTerm, typeFilter, statusFilter]);
+
+  const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
+  const filteredUnreadCount = useMemo(() => filteredNotifications.filter((item) => !item.read).length, [filteredNotifications]);
+
+  const stats = [
+    {
+      title: 'Total Notifications',
+      value: loading ? '...' : notifications.length,
+      subtitle: 'All notification records available in your account.',
+      badge: 'Inbox',
+      cardClass: 'bg-blue-50 ring-1 ring-blue-100',
+      valueClass: 'text-blue-700',
+    },
+    {
+      title: 'Unread Notifications',
+      value: loading ? '...' : unreadCount,
+      subtitle: 'Notifications that still require your attention.',
+      badge: 'Pending',
+      cardClass: 'bg-yellow-50 ring-1 ring-yellow-100',
+      valueClass: 'text-yellow-700',
+    },
+    {
+      title: 'Filtered Results',
+      value: loading ? '...' : filteredNotifications.length,
+      subtitle: `${filteredUnreadCount} unread notifications match the current filters.`,
+      badge: 'Filter',
+      cardClass: 'bg-green-50 ring-1 ring-green-100',
+      valueClass: 'text-green-700',
+    },
+  ];
 
     return '';
   };
@@ -203,7 +278,7 @@ const Notifications = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to publish notification');
@@ -240,7 +315,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to mark notification as read');
@@ -263,7 +338,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to mark all notifications as read');
@@ -288,7 +363,7 @@ const Notifications = () => {
         },
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to delete notification');

@@ -2,19 +2,6 @@ const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const { getIO } = require('../socket');
 
-const ALLOWED_TYPES = ['success', 'info', 'warning', 'error'];
-
-const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
-const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
-
-const emitToUser = (userId, eventName, payload) => {
-  try {
-    getIO().to(`user:${userId}`).emit(eventName, payload);
-  } catch (error) {
-    console.error(`socket emit error [${eventName}]:`, error.message);
-  }
-};
-
 const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
