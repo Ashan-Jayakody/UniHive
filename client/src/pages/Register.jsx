@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
 const API_BASE = 'http://localhost:5000/api/auth';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'.-]{1,99}$/;
 
 const facultyOptions = ['Computing', 'Engineering', 'Business', 'Humanities'];
 
@@ -14,6 +17,26 @@ const courseMap = {
 };
 
 const academicYearOptions = ['1', '2', '3', '4'];
+
+const capitalizeName = (value) => {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trimStart()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word
+        .split(/([-'])/)
+        .map((part) =>
+          part === '-' || part === "'"
+            ? part
+            : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join('')
+    )
+    .join(' ');
+};
 
 const Register = () => {
   const navigate = useNavigate();
@@ -60,7 +83,12 @@ const Register = () => {
 
     let updated = {
       ...formData,
-      [name]: value,
+      [name]:
+        name === 'email'
+          ? value.trimStart().toLowerCase()
+          : name === 'name'
+          ? capitalizeName(value)
+          : value,
     };
 
     if (name === 'role') {
@@ -81,17 +109,100 @@ const Register = () => {
     setFormData(updated);
   };
 
+  const validateRegisterForm = () => {
+    const name = formData.name.trim();
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+    const role = formData.role;
+    const faculty = formData.faculty;
+    const course = formData.course;
+    const academicYear = formData.academicYear;
+
+    if (!name) {
+      return 'Full name is required.';
+    }
+
+    if (!NAME_REGEX.test(name)) {
+      return 'Please enter a valid full name using letters only.';
+    }
+
+    if (!email) {
+      return 'Email address is required.';
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (!password) {
+      return 'Password is required.';
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return 'Password must be at least 8 characters and include uppercase, lowercase, and a number.';
+    }
+
+    if (!['student', 'faculty', 'admin'].includes(role)) {
+      return 'Please select a valid role.';
+    }
+
+    if (role !== 'admin' && !faculty) {
+      return 'Faculty is required.';
+    }
+
+    if (role !== 'admin' && faculty && !facultyOptions.includes(faculty)) {
+      return 'Please select a valid faculty.';
+    }
+
+    if (role === 'student') {
+      if (!academicYear) {
+        return 'Academic year is required for students.';
+      }
+
+      if (!academicYearOptions.includes(String(academicYear))) {
+        return 'Please select a valid academic year.';
+      }
+
+      if (!course) {
+        return 'Course is required for students.';
+      }
+
+      const validCourses = courseMap[faculty] || [];
+      if (!validCourses.includes(course)) {
+        return 'Please select a valid course for the selected faculty.';
+      }
+    }
+
+    return null;
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
+
+    const validationError = validateRegisterForm();
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
 
     try {
       setLoading(true);
       setVerificationToken('');
 
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        role: formData.role,
+        faculty: formData.role === 'admin' ? '' : formData.faculty,
+        course: formData.role === 'student' ? formData.course : '',
+        academicYear: formData.role === 'student' ? formData.academicYear : '',
+      };
+
       const response = await fetch(`${API_BASE}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -179,7 +290,7 @@ const Register = () => {
             Role-based registration workflow
           </div>
 
-          <form onSubmit={handleRegister} className="mt-8 grid gap-5">
+          <form onSubmit={handleRegister} className="mt-8 grid gap-5" noValidate>
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">Full Name</label>
               <input
@@ -218,6 +329,9 @@ const Register = () => {
                   className={inputStyle}
                   placeholder="Create a secure password"
                 />
+                <p className="mt-2 text-xs text-slate-500">
+                  Use at least 8 characters with uppercase, lowercase, and a number.
+                </p>
               </div>
             </div>
 
@@ -304,6 +418,15 @@ const Register = () => {
               </div>
             )}
 
+            {verificationToken && (
+              <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm text-green-700">
+                <p className="font-semibold">Verification token generated successfully.</p>
+                <p className="mt-2 break-all">
+                  Token: <span className="font-mono">{verificationToken}</span>
+                </p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -312,8 +435,6 @@ const Register = () => {
               {loading ? 'Creating Account...' : 'Register Account'}
             </button>
           </form>
-
-          
 
           <div className="mt-6 text-center">
             <span className="text-sm text-slate-500">Already have an account? </span>

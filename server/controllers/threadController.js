@@ -1,8 +1,39 @@
+const mongoose = require('mongoose');
 const Thread = require('../models/Thread');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { getIO } = require('../socket');
 
+// ================= VALIDATION HELPERS =================
+
+const sanitize = (text) => (typeof text === 'string' ? text.trim() : '');
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const validateThread = ({ title, topic, content }) => {
+  if (!title || title.length < 5 || title.length > 120) {
+    return 'Title must be between 5 and 120 characters';
+  }
+
+  if (!topic || topic.length < 2 || topic.length > 50) {
+    return 'Topic must be between 2 and 50 characters';
+  }
+
+  if (!content || content.length < 10 || content.length > 2000) {
+    return 'Content must be between 10 and 2000 characters';
+  }
+
+  return null;
+};
+
+const validateReply = (text) => {
+  if (!text || text.length < 1 || text.length > 500) {
+    return 'Reply must be between 1 and 500 characters';
+  }
+  return null;
+};
+
+// ================= SOCKET EMIT =================
 
 const emitNotificationToUser = (userId, notification) => {
   try {
@@ -12,16 +43,17 @@ const emitNotificationToUser = (userId, notification) => {
   }
 };
 
-// GET ALL THREADS
+// ================= GET THREADS =================
+
 exports.getAllThreads = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.max(parseInt(req.query.limit) || 6, 1);
     const skip = (page - 1) * limit;
 
-    const search = (req.query.search || '').trim();
-    const topic = (req.query.topic || '').trim();
-    const sort = (req.query.sort || 'latest').trim();
+    const search = sanitize(req.query.search || '');
+    const topic = sanitize(req.query.topic || '');
+    const sort = sanitize(req.query.sort || 'latest');
 
     const query = {};
 
@@ -53,12 +85,9 @@ exports.getAllThreads = async (req, res) => {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        hasNextPage: page < Math.ceil(total / limit),
-        hasPrevPage: page > 1,
       },
     });
   } catch (error) {
-    console.error('getAllThreads error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -123,6 +152,10 @@ exports.getMySavedThreads = async (req, res) => {
 
 exports.saveThread = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
+
     const thread = await Thread.findById(req.params.id);
     if (!thread) {
       return res.status(404).json({ message: 'Thread not found' });
@@ -163,6 +196,10 @@ exports.saveThread = async (req, res) => {
 
 exports.unsaveThread = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
+
     const thread = await Thread.findById(req.params.id);
     if (!thread) {
       return res.status(404).json({ message: 'Thread not found' });
@@ -188,16 +225,19 @@ exports.unsaveThread = async (req, res) => {
 
 exports.createThread = async (req, res) => {
   try {
-    const { title, topic, content } = req.body;
+    const payload = {
+      title: sanitize(req.body.title),
+      topic: sanitize(req.body.topic),
+      content: sanitize(req.body.content),
+    };
 
-    if (!title || !topic || !content) {
-      return res.status(400).json({ message: 'Title, topic, and content are required' });
+    const errorMsg = validateThread(payload);
+    if (errorMsg) {
+      return res.status(400).json({ message: errorMsg });
     }
 
     const thread = await Thread.create({
-      title,
-      topic,
-      content,
+      ...payload,
       author: req.user?.name || 'User',
       authorId: req.user?._id || null,
       replies: [],
@@ -207,7 +247,7 @@ exports.createThread = async (req, res) => {
       const notification = await Notification.create({
         user: req.user._id,
         title: 'Thread Created',
-        message: `Your discussion thread "${thread.title}" was posted successfully.`,
+        message: `Your discussion "${thread.title}" was posted.`,
         type: 'success',
         read: false,
       });
@@ -224,26 +264,39 @@ exports.createThread = async (req, res) => {
 
 exports.updateThread = async (req, res) => {
   try {
-    const { title, topic, content } = req.body;
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
 
     const thread = await Thread.findById(req.params.id);
     if (!thread) {
       return res.status(404).json({ message: 'Thread not found' });
     }
 
-    const isOwner = String(thread.authorId || '') === String(req.user?._id || '');
-    const isAdmin = req.user?.role === 'admin';
+    const isOwner = String(thread.authorId) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    thread.title = title ?? thread.title;
-    thread.topic = topic ?? thread.topic;
-    thread.content = content ?? thread.content;
+    const updated = {
+      title: sanitize(req.body.title ?? thread.title),
+      topic: sanitize(req.body.topic ?? thread.topic),
+      content: sanitize(req.body.content ?? thread.content),
+    };
 
-    const updatedThread = await thread.save();
-    res.json(updatedThread);
+    const errorMsg = validateThread(updated);
+    if (errorMsg) {
+      return res.status(400).json({ message: errorMsg });
+    }
+
+    thread.title = updated.title;
+    thread.topic = updated.topic;
+    thread.content = updated.content;
+
+    const saved = await thread.save();
+    res.json(saved);
   } catch (error) {
     console.error('updateThread error:', error);
     res.status(500).json({ message: error.message });
@@ -252,21 +305,29 @@ exports.updateThread = async (req, res) => {
 
 exports.deleteThread = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
+
     const thread = await Thread.findById(req.params.id);
     if (!thread) {
       return res.status(404).json({ message: 'Thread not found' });
     }
 
-    const isOwner = String(thread.authorId || '') === String(req.user?._id || '');
-    const isAdmin = req.user?.role === 'admin';
+    const isOwner = String(thread.authorId) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    await User.updateMany({ savedThreads: thread._id }, { $pull: { savedThreads: thread._id } });
+    await User.updateMany(
+      { savedThreads: thread._id },
+      { $pull: { savedThreads: thread._id } }
+    );
 
     await thread.deleteOne();
+
     res.json({ message: 'Thread deleted successfully' });
   } catch (error) {
     console.error('deleteThread error:', error);
@@ -276,10 +337,15 @@ exports.deleteThread = async (req, res) => {
 
 exports.addReply = async (req, res) => {
   try {
-    const { text } = req.body;
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: 'Invalid thread ID' });
+    }
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ message: 'Reply text is required' });
+    const text = sanitize(req.body.text);
+
+    const errorMsg = validateReply(text);
+    if (errorMsg) {
+      return res.status(400).json({ message: errorMsg });
     }
 
     const thread = await Thread.findById(req.params.id);
@@ -287,25 +353,21 @@ exports.addReply = async (req, res) => {
       return res.status(404).json({ message: 'Thread not found' });
     }
 
-    const newReply = {
-      text: text.trim(),
+    const reply = {
+      text,
       author: req.user?.name || 'User',
-      authorId: req.user?._id || null,
+      authorId: req.user?._id,
       createdAt: new Date(),
     };
 
-    thread.replies.push(newReply);
+    thread.replies.push(reply);
     await thread.save();
 
-    if (
-      thread.authorId &&
-      req.user?._id &&
-      String(thread.authorId) !== String(req.user._id)
-    ) {
+    if (thread.authorId && String(thread.authorId) !== String(req.user._id)) {
       const notification = await Notification.create({
         user: thread.authorId,
-        title: 'New Reply on Your Thread',
-        message: `${req.user.name || 'A user'} replied to your thread "${thread.title}".`,
+        title: 'New Reply',
+        message: `${req.user.name} replied to your thread`,
         type: 'info',
         read: false,
       });
@@ -322,26 +384,31 @@ exports.addReply = async (req, res) => {
 
 exports.updateReply = async (req, res) => {
   try {
-    const { text } = req.body;
+    if (!isValidObjectId(req.params.id) || !isValidObjectId(req.params.replyId)) {
+      return res.status(404).json({ message: 'Invalid thread or reply ID' });
+    }
+
+    const text = sanitize(req.body.text);
+
+    const errorMsg = validateReply(text);
+    if (errorMsg) {
+      return res.status(400).json({ message: errorMsg });
+    }
 
     const thread = await Thread.findById(req.params.id);
-    if (!thread) {
-      return res.status(404).json({ message: 'Thread not found' });
-    }
+    if (!thread) return res.status(404).json({ message: 'Thread not found' });
 
     const reply = thread.replies.id(req.params.replyId);
-    if (!reply) {
-      return res.status(404).json({ message: 'Reply not found' });
-    }
+    if (!reply) return res.status(404).json({ message: 'Reply not found' });
 
-    const isOwner = String(reply.authorId || '') === String(req.user?._id || '');
-    const isAdmin = req.user?.role === 'admin';
+    const isOwner = String(reply.authorId) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    reply.text = text ?? reply.text;
+    reply.text = text;
     await thread.save();
 
     res.json(thread);
@@ -353,18 +420,18 @@ exports.updateReply = async (req, res) => {
 
 exports.deleteReply = async (req, res) => {
   try {
-    const thread = await Thread.findById(req.params.id);
-    if (!thread) {
-      return res.status(404).json({ message: 'Thread not found' });
+    if (!isValidObjectId(req.params.id) || !isValidObjectId(req.params.replyId)) {
+      return res.status(404).json({ message: 'Invalid thread or reply ID' });
     }
+
+    const thread = await Thread.findById(req.params.id);
+    if (!thread) return res.status(404).json({ message: 'Thread not found' });
 
     const reply = thread.replies.id(req.params.replyId);
-    if (!reply) {
-      return res.status(404).json({ message: 'Reply not found' });
-    }
+    if (!reply) return res.status(404).json({ message: 'Reply not found' });
 
-    const isOwner = String(reply.authorId || '') === String(req.user?._id || '');
-    const isAdmin = req.user?.role === 'admin';
+    const isOwner = String(reply.authorId) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Access denied' });

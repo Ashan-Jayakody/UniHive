@@ -3,6 +3,43 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'.-]{1,99}$/;
+
+const ALLOWED_ROLES = ['student', 'faculty', 'admin'];
+const FACULTY_OPTIONS = ['Computing', 'Engineering', 'Business', 'Humanities'];
+const COURSE_MAP = {
+  Computing: ['Software Engineering', 'Computer Science', 'Cyber Security', 'Data Science'],
+  Engineering: ['Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering'],
+  Business: ['Business Administration', 'Accounting', 'Finance', 'Marketing'],
+  Humanities: ['Psychology', 'English', 'International Relations'],
+};
+const ACADEMIC_YEAR_OPTIONS = ['1', '2', '3', '4'];
+
+const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+const normalizeEmail = (email) => sanitizeText(email).toLowerCase();
+
+const capitalizeName = (value) => {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word
+        .split(/([-'])/)
+        .map((part) =>
+          part === '-' || part === "'"
+            ? part
+            : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join('')
+    )
+    .join(' ');
+};
+
 const generateToken = (id, name, email, role, status, avatar = '', emailVerified = false) => {
   return jwt.sign(
     { id, name, email, role, status, avatar, emailVerified },
@@ -11,10 +48,81 @@ const generateToken = (id, name, email, role, status, avatar = '', emailVerified
   );
 };
 
-// REGISTER
-exports.registerUser = async (req, res) => {
+const validateRegisterInput = ({
+  name,
+  email,
+  password,
+  role,
+  faculty,
+  course,
+  academicYear,
+}) => {
+  const cleanName = capitalizeName(name);
+  const cleanEmail = normalizeEmail(email);
+  const cleanPassword = typeof password === 'string' ? password : '';
+  const cleanRole = sanitizeText(role);
+  const cleanFaculty = sanitizeText(faculty);
+  const cleanCourse = sanitizeText(course);
+  const cleanAcademicYear =
+    academicYear !== undefined && academicYear !== null ? String(academicYear).trim() : '';
+
+  if (!cleanName || !cleanEmail || !cleanPassword || !cleanRole) {
+    return 'Please fill all required fields';
+  }
+
+  if (!NAME_REGEX.test(cleanName)) {
+    return 'Please enter a valid full name';
+  }
+
+  if (!EMAIL_REGEX.test(cleanEmail)) {
+    return 'Please enter a valid email address';
+  }
+
+  if (!ALLOWED_ROLES.includes(cleanRole)) {
+    return 'Please select a valid role';
+  }
+
+  if (!PASSWORD_REGEX.test(cleanPassword)) {
+    return 'Password must be at least 8 characters and include uppercase, lowercase, and a number';
+  }
+
+  if (cleanRole !== 'admin') {
+    if (!cleanFaculty) {
+      return 'Faculty is required';
+    }
+
+    if (!FACULTY_OPTIONS.includes(cleanFaculty)) {
+      return 'Please select a valid faculty';
+    }
+  }
+
+  if (cleanRole === 'student') {
+    if (!cleanCourse) {
+      return 'Course is required for students';
+    }
+
+    if (!cleanAcademicYear) {
+      return 'Academic year is required for students';
+    }
+
+    const validCourses = COURSE_MAP[cleanFaculty] || [];
+    if (!validCourses.includes(cleanCourse)) {
+      return 'Please select a valid course for the selected faculty';
+    }
+
+    if (!ACADEMIC_YEAR_OPTIONS.includes(cleanAcademicYear)) {
+      return 'Please select a valid academic year';
+    }
+  }
+
+  return null;
+};
+
+const registerUser = async (req, res) => {
   try {
-    const {
+    const { name, email, password, role, faculty, course, academicYear } = req.body;
+
+    const validationError = validateRegisterInput({
       name,
       email,
       password,
@@ -22,13 +130,20 @@ exports.registerUser = async (req, res) => {
       faculty,
       course,
       academicYear,
-    } = req.body;
+    });
 
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ message: 'Please fill all required fields' });
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    const cleanName = capitalizeName(name);
+    const cleanEmail = normalizeEmail(email);
+    const cleanRole = sanitizeText(role);
+    const cleanFaculty = cleanRole === 'admin' ? '' : sanitizeText(faculty);
+    const cleanCourse = cleanRole === 'student' ? sanitizeText(course) : '';
+    const cleanAcademicYear = cleanRole === 'student' ? Number(String(academicYear).trim()) : null;
+
+    const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
@@ -37,13 +152,13 @@ exports.registerUser = async (req, res) => {
     const emailVerificationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
     const user = await User.create({
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
+      name: cleanName,
+      email: cleanEmail,
       password,
-      role,
-      faculty: faculty || '',
-      course: role === 'student' ? course || '' : '',
-      academicYear: role === 'student' && academicYear ? Number(academicYear) : null,
+      role: cleanRole,
+      faculty: cleanFaculty,
+      course: cleanCourse,
+      academicYear: cleanAcademicYear,
       emailVerificationToken,
       emailVerificationExpires,
     });
@@ -87,12 +202,20 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// LOGIN
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!email || !password.trim()) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -134,16 +257,19 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// FORGOT PASSWORD
-exports.forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
 
-    if (!email || !email.trim()) {
+    if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ message: 'No user found with this email' });
@@ -175,13 +301,20 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// RESET PASSWORD
-exports.resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
   try {
-    const { token, password } = req.body;
+    const token = sanitizeText(req.body.token);
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
 
     if (!token || !password) {
       return res.status(400).json({ message: 'Token and new password are required' });
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return res.status(400).json({
+        message:
+          'Password must be at least 8 characters and include uppercase, lowercase, and a number',
+      });
     }
 
     const user = await User.findOne({
@@ -213,12 +346,11 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// VERIFY EMAIL
-exports.verifyEmail = async (req, res) => {
+const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.body;
+    const token = sanitizeText(req.body.token);
 
-    if (!token || !token.trim()) {
+    if (!token) {
       return res.status(400).json({ message: 'Verification token is required' });
     }
 
@@ -254,16 +386,19 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// RESEND EMAIL VERIFICATION
-exports.resendEmailVerification = async (req, res) => {
+const resendEmailVerification = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
 
-    if (!email || !email.trim()) {
+    if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ message: 'No user found with this email' });
@@ -297,4 +432,13 @@ exports.resendEmailVerification = async (req, res) => {
     console.error('resendEmailVerification error:', error);
     res.status(500).json({ message: error.message });
   }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+  resendEmailVerification,
 };

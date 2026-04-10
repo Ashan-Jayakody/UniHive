@@ -2,9 +2,17 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { socket } from '../socket';
 import {
-  Home, LayoutGrid, User, Folder,
-  GraduationCap, LifeBuoy, BarChart2,
-  Wrench, Bell, LogOut, MessageSquare
+  Home,
+  LayoutGrid,
+  User,
+  Folder,
+  GraduationCap,
+  LifeBuoy,
+  BarChart2,
+  Wrench,
+  Bell,
+  LogOut,
+  MessageSquare,
 } from 'lucide-react';
 
 const NOTIFICATION_API = 'http://localhost:5000/api/notifications';
@@ -49,19 +57,18 @@ const formatRole = (role) => {
   return role || '-';
 };
 
-
 const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) => {
-  const navigate   = useNavigate();
-  const location   = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?._id || currentUser?.id || '';
   const isAdmin    = currentUser?.role === 'admin';
   const canViewResourceAnalytics = ['faculty', 'admin'].includes(currentUser?.role);
 
 
-  const [notifications,        setNotifications]        = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
-  const [dropdownOpen,         setDropdownOpen]         = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const dropdownRef = useRef(null);
 
@@ -77,7 +84,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     };
   };
 
- 
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -117,13 +123,13 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     };
   }, [currentUserId, location.pathname]);
 
-  // Socket event listeners 
   useEffect(() => {
     if (!currentUserId) return;
 
     const onNew = (notification) => {
       setNotifications((prev) => [notification, ...prev]);
     };
+
     const onUpdated = (payload) => {
       setNotifications((prev) =>
         prev.map((item) =>
@@ -131,33 +137,35 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         )
       );
     };
+
     const onAllRead = () => {
       setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
     };
+
     const onDeleted = (payload) => {
       setNotifications((prev) => prev.filter((item) => item._id !== payload._id));
     };
 
-    socket.on('notification:new',     onNew);
+    socket.on('notification:new', onNew);
     socket.on('notification:updated', onUpdated);
     socket.on('notification:all-read', onAllRead);
     socket.on('notification:deleted', onDeleted);
 
     return () => {
-      socket.off('notification:new',     onNew);
+      socket.off('notification:new', onNew);
       socket.off('notification:updated', onUpdated);
       socket.off('notification:all-read', onAllRead);
       socket.off('notification:deleted', onDeleted);
     };
   }, [currentUserId]);
 
-  // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -166,11 +174,11 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     () => notifications.filter((item) => !item.read).length,
     [notifications]
   );
+
   const latestNotifications = useMemo(
     () => notifications.slice(0, 5),
     [notifications]
   );
-
 
   const formatDate = (value) => {
     if (!value) return '-';
@@ -179,45 +187,55 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     return date.toLocaleString();
   };
 
-
   const getTypeBadge = (type) => {
     if (type === 'success') return 'bg-green-100/70 text-green-700 border border-green-200/70';
     if (type === 'warning') return 'bg-yellow-100/70 text-yellow-700 border border-yellow-200/70';
-    if (type === 'error')   return 'bg-red-100/70 text-red-700 border border-red-200/70';
+    if (type === 'error') return 'bg-red-100/70 text-red-700 border border-red-200/70';
     return 'bg-blue-100/70 text-blue-700 border border-blue-200/70';
   };
 
-  
   const getTypeLabel = (type) => {
     if (type === 'success') return 'Success';
     if (type === 'warning') return 'Warning';
-    if (type === 'error')   return 'Critical';
+    if (type === 'error') return 'Critical';
     return 'Information';
   };
 
- 
   const handleMarkAsRead = async (id) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      await fetch(`${NOTIFICATION_API}/${id}/read`, {
+
+      const response = await fetch(`${NOTIFICATION_API}/${id}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item._id === id ? { ...item, read: true } : item
+          )
+        );
+      }
     } catch {
       // ignore request errors in quick action
     }
   };
 
- 
   const handleMarkAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      await fetch(`${NOTIFICATION_API}/read-all`, {
+
+      const response = await fetch(`${NOTIFICATION_API}/read-all`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (response.ok) {
+        setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+      }
     } catch {
       // ignore request errors in quick action
     }
@@ -233,7 +251,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
   const initials = currentUser?.name?.charAt(0)?.toUpperCase() || 'U';
   const activePath = location.pathname;
 
- 
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col bg-linear-to-br from-blue-700 via-blue-600 to-emerald-600
@@ -247,10 +264,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           <p className="mt-1 text-[15px] font-semibold text-white">UniHive</p>
         </div>
 
-        {/* Nav links */}
         <nav className="flex-1 overflow-y-auto px-3 py-3">
-
-          {/* Overview */}
           <p className="nav-section-label">Overview</p>
 
           {showBackHome && (
@@ -265,7 +279,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
             </SidebarLink>
           )}
 
-          {/* Modules */}
           {currentUser && <p className="nav-section-label mt-3">Modules</p>}
 
           {currentUser && (
@@ -275,7 +288,11 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           )}
 
           {currentUser && (
-            <SidebarLink to="/resourceShare" label="Resource Sharing" active={activePath === '/resourceShare'}>
+            <SidebarLink
+              to="/resourceShare"
+              label="Resource Sharing"
+              active={activePath === '/resourceShare'}
+            >
               <Folder size={15} strokeWidth={1.5} />
             </SidebarLink>
           )}
@@ -287,7 +304,11 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           )}
 
           {currentUser && (
-            <SidebarLink to="/peerTutoring" label="Peer Tutoring" active={activePath === '/peerTutoring'}>
+            <SidebarLink
+              to="/peerTutoring"
+              label="Peer Tutoring"
+              active={activePath === '/peerTutoring'}
+            >
               <GraduationCap size={15} strokeWidth={1.5} />
             </SidebarLink>
           )}
@@ -304,28 +325,38 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
           )}
 
           {currentUser && (
-            <SidebarLink to="/communication" label="Communication-Hub" active={activePath === '/communication'}>
+            <SidebarLink
+              to="/communication"
+              label="Communication-Hub"
+              active={activePath === '/communication'}
+            >
               <MessageSquare size={15} strokeWidth={1.5} />
             </SidebarLink>
           )}
 
-          {/* Admin */}
           {isAdmin && <p className="nav-section-label mt-3">Admin</p>}
 
           {isAdmin && (
-            <SidebarLink to="/admin-analytics" label="Analytics" active={activePath === '/admin-analytics'}>
+            <SidebarLink
+              to="/admin-analytics"
+              label="Analytics"
+              active={activePath === '/admin-analytics'}
+            >
               <BarChart2 size={15} strokeWidth={1.5} />
             </SidebarLink>
           )}
 
           {isAdmin && (
-            <SidebarLink to="/users" label="User Administration" active={activePath === '/users'}>
+            <SidebarLink
+              to="/users"
+              label="User Administration"
+              active={activePath === '/users'}
+            >
               <Wrench size={15} strokeWidth={1.5} />
             </SidebarLink>
           )}
         </nav>
 
-        {/* User footer */}
         <div className="border-t border-white/10 px-3 py-3">
           {currentUser && (
             <div className="mb-1 flex items-center gap-2.5 rounded-lg px-2 py-2">
@@ -344,9 +375,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                 <p className="truncate text-xs font-semibold text-white">
                   {currentUser.name || 'User'}
                 </p>
-                <p className="text-[10px] text-white/40">
-                  {formatRole(currentUser.role)}
-                </p>
+                <p className="text-[10px] text-white/40">{formatRole(currentUser.role)}</p>
               </div>
             </div>
           )}
@@ -371,7 +400,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         </div>
       </aside>
 
-      {/* Topbar */}
       <header className="fixed left-56 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-6">
         <div>
           <p className="text-[11px] text-slate-400">UniHive / {title}</p>
@@ -380,7 +408,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
         </div>
 
         <div className="flex items-center gap-2.5">
-
           {currentUser && (
             <div className="relative z-200" ref={dropdownRef}>
               <button
@@ -396,7 +423,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                 )}
               </button>
 
-             
               {dropdownOpen && (
                 <div className="absolute right-0 top-full z-99999 mt-2 w-92.5 rounded-2xl border border-slate-200 bg-white shadow-xl">
 
@@ -439,7 +465,9 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${getTypeBadge(item.type)}`}>
+                                <span
+                                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${getTypeBadge(item.type)}`}
+                                >
                                   {getTypeLabel(item.type)}
                                 </span>
                                 <span
@@ -452,6 +480,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                                   {item.read ? 'Read' : 'Unread'}
                                 </span>
                               </div>
+
                               <p className="truncate text-sm font-bold text-slate-900">
                                 {item.title}
                               </p>
@@ -462,6 +491,7 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                                 Issued: {formatDate(item.createdAt)}
                               </p>
                             </div>
+
                             {!item.read && (
                               <button
                                 type="button"
@@ -477,7 +507,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
                     )}
                   </div>
 
-                  {/* Footer */}
                   <div className="border-t border-slate-100 px-4 py-2.5">
                     <Link
                       to="/notifications"
@@ -526,7 +555,6 @@ const AppHeader = ({ title = 'UniHive', subtitle = '', showBackHome = true }) =>
     </>
   );
 };
-
 
 const SidebarLink = ({ to, label, active, badge, children }) => (
   <Link
