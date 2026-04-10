@@ -2,8 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
+<<<<<<< HEAD
 const API_BASE = 'http://localhost:5000/api/auth';
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+=======
+const API_BASE = 'http://localhost:8000/api/auth';
+>>>>>>> feature-minoli
 
 const ResetPassword = () => {
   const navigate = useNavigate();

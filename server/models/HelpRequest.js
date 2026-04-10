@@ -1,4 +1,3 @@
-const { timestamp } = require('drizzle-orm/gel-core');
 const mongoose = require('mongoose');
 
 const helpRequestSchema = new mongoose.Schema({

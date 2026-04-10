@@ -2,10 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
+<<<<<<< HEAD
 const API_BASE = 'http://localhost:5000/api/auth';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s'.-]{1,99}$/;
+=======
+const API_BASE = 'http://localhost:8000/api/auth';
+>>>>>>> feature-minoli
 
 const facultyOptions = ['Computing', 'Engineering', 'Business', 'Humanities'];
 
