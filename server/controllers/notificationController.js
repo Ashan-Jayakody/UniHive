@@ -2,6 +2,21 @@ const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const { getIO } = require('../socket');
 
+const ALLOWED_TYPES = ['info', 'success', 'warning', 'error'];
+
+const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+
+const emitToUser = (userId, eventName, payload) => {
+  try {
+    const io = getIO();
+    io.to(String(userId)).emit(eventName, payload);
+  } catch (error) {
+    console.error(`Socket emit failed for ${eventName}:`, error.message);
+  }
+};
+
 const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -23,7 +38,9 @@ const createNotification = async (req, res) => {
     }
 
     if (title.length < 3 || title.length > 120) {
-      return res.status(400).json({ message: 'Notification title must be between 3 and 120 characters' });
+      return res.status(400).json({
+        message: 'Notification title must be between 3 and 120 characters',
+      });
     }
 
     if (!message) {
@@ -31,7 +48,9 @@ const createNotification = async (req, res) => {
     }
 
     if (message.length < 5 || message.length > 1000) {
-      return res.status(400).json({ message: 'Notification message must be between 5 and 1000 characters' });
+      return res.status(400).json({
+        message: 'Notification message must be between 5 and 1000 characters',
+      });
     }
 
     if (!ALLOWED_TYPES.includes(type)) {
