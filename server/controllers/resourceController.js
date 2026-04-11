@@ -79,7 +79,7 @@ exports.createResource = async (req, res) => {
 
     // support multipart uploads if req.file exists
     const resolvedFileUrl = req.file
-      ? req.protocol + '://' + req.get('host') + '/uploads/resources/' + req.file.filename
+      ? req.file.path
       : (fileUrl || '').trim();
     const resolvedMimeType = req.file ? req.file.mimetype : (mimeType || '').trim();
     const resolvedSize = req.file ? req.file.size : Number(size || 0);
