@@ -147,7 +147,7 @@ const RequestDetailModal = ({ request, onClose, onOfferHelp, onAccept, showOffer
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
                 Attachment
               </p>
-              {request.attachmentUrl.match(/\.(jpeg|jpg|png|gif)$/i) ? (
+              {request.attachmentUrl.match(/\.(jpeg|jpg|png|gif)(\?.*)?$/i) ? (
                 <img
                   src={request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:5000${request.attachmentUrl}`}
                   alt="Attachment"
