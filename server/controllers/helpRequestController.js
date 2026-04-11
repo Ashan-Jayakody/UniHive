@@ -8,7 +8,7 @@ const createHelpRequest = async (req, res) => {
         const {requesterId, topic, description, urgencyLevel, tags} = req.body;
         let attachmentUrl = null;
         if (req.file) {
-            attachmentUrl = `/uploads/${req.file.filename}`; 
+            attachmentUrl = req.file.path; 
         }
 
         const parsedTags =

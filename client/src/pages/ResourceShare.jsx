@@ -266,8 +266,8 @@ const ResourceShare = () => {
       setError("Title, category, and subject are required.");
       return;
     }
-    if (uploadForm.file && uploadForm.file.size > 25 * 1024 * 1024) {
-      setError("File too large. Max size is 25MB.");
+    if (uploadForm.file && uploadForm.file.size > 100 * 1024 * 1024) {
+      setError("File too large. Max size is 100MB.");
       return;
     }
 
