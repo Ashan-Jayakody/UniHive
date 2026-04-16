@@ -50,11 +50,11 @@ const ExpertMatch = ({isOpen, helpers, requestId, onClose}) => {
 return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-                <h2 className="text-2xl font-bold mb-2">Expert Matches Found!</h2>
+                <h2 className="text-2xl font-bold mb-2">Expert Matches ...</h2>
                 
                 {helpers.length > 0 ? (
                     <p className="text-gray-600 mb-4">
-                        We found some students who excel in these topics. Select up to 3 to invite directly:
+                        We found some students who are experts in these topics. Select up to 3 to invite directly:
                     </p>
                 ) : (
                     <p className="text-gray-600 mb-4">
@@ -81,7 +81,7 @@ return (
                                 </div>
                                 <div className="text-right">
                                     <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded">
-                                        ⭐ {helper.rating || 'New'}
+                                        ⭐ {helper.points > 0 ? helper.points : 'New'}
                                     </span>
                                 </div>
                             </div>

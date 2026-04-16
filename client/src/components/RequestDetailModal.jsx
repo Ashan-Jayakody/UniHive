@@ -187,33 +187,15 @@ const RequestDetailModal = ({ request, onClose, onOfferHelp, onAccept, showOffer
             </div>
           )}
 
-          {/* Rating — shown when Resolved */}
-          {request.status === 'Resolved' && request.rating && (
-            <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-500 mb-2">
-                Rating given
+          {/* Summary — shown when Resolved */}
+          {request.status === 'Resolved' && request.summary && (
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-green-600 mb-2.5">
+                ✓ Solution Summary
               </p>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <svg
-                    key={star}
-                    width="16" height="16"
-                    viewBox="0 0 24 24"
-                    className={star <= request.rating ? 'fill-amber-400 stroke-amber-400' : 'fill-slate-200 stroke-slate-300'}
-                    strokeWidth="1.5"
-                  >
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                  </svg>
-                ))}
-                <span className="text-xs text-amber-700 font-medium ml-1">
-                  {request.rating}/5
-                </span>
-              </div>
-              {request.summary && (
-                <p className="text-xs text-amber-800 mt-1.5 leading-relaxed">
-                  {request.summary}
-                </p>
-              )}
+              <p className="text-sm text-green-900 leading-relaxed font-medium">
+                {request.summary}
+              </p>
             </div>
           )}
 
@@ -228,7 +210,7 @@ const RequestDetailModal = ({ request, onClose, onOfferHelp, onAccept, showOffer
         {/* Footer actions */}
         {(showOfferHelp || showAccept) && (
           <div className="px-5 py-4 border-t border-slate-100 bg-slate-50">
-            {showOfferHelp && (
+            {showOfferHelp && request.status !== 'Resolved' && (
               <button
                 onClick={() => onOfferHelp(request._id)}
                 disabled={actionLoading}

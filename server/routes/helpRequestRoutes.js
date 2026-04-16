@@ -12,7 +12,8 @@ const {
   getMessages,
   getMyRequests,
   getSingleRequest,
-  resolveHelpRequest
+  resolveHelpRequest,
+  deleteHelpRequest
 } = require('../controllers/helpRequestController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -33,5 +34,6 @@ router.put('/:id/invite',   protect, inviteExperts);
 router.put('/:id/accept',   protect, acceptHelpRequest);
 router.put('/:id/resolve',  protect, resolveHelpRequest);
 router.post('/:id/message', protect, addMessage);
+router.delete('/:id',       protect, deleteHelpRequest);
 
 module.exports = router;

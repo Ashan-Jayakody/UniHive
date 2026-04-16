@@ -1,4 +1,4 @@
-import { Clock, Plus, ChevronDown, X, Search } from "lucide-react";
+import { Clock, Plus, ChevronDown, X, Search, Trash2 } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import RequestDetailModal from "../components/RequestDetailModal";
 import { Link, useNavigate } from "react-router-dom";
@@ -98,6 +98,39 @@ const HelpBoard = () => {
     }
   };
 
+  // delete help request (admin only)
+  const handleDeleteRequest = async (requestId) => {
+    if (!window.confirm("Are you sure you want to remove this help request from the board?")) {
+      return;
+    }
+
+    setActionLoading(requestId);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/request/${requestId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete help request");
+      }
+
+      // Remove from local state
+      setRequests(requests.filter((r) => r._id !== requestId));
+      alert("Request removed successfully");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const facultyOptions = useMemo(() => {
     const set = new Set(
       requests.map((r) => r.requester?.faculty).filter(Boolean),
@@ -175,6 +208,19 @@ const HelpBoard = () => {
     }
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Resolved":
+        return "bg-green-100 text-green-800 border-green-400";
+      case "In Progress":
+        return "bg-blue-100 text-blue-800 border-blue-400";
+      case "Open":
+        return "bg-amber-100 text-amber-800 border-amber-400";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
   const formatTime = (dateValue) => {
     if (!dateValue) return "";
     const diff = Math.floor((Date.now() - new Date(dateValue)) / 60000);
@@ -203,37 +249,50 @@ const HelpBoard = () => {
     <div className="max-w-5xl mx-auto px-6 py-7">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-3xl font-sans font-bold mb-8 text-gray-800">
-          University Help Board
+          {currentUser?.role === 'admin' ? 'Help Exchange Management' : 'University Help Board'}
         </h1>
         <div className="flex gap-4">
-          <Link
-            to="/requests"
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-95 transition-all duration-200"
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            Request Help
-          </Link>
+          {currentUser?.role !== 'admin' && (
+            <>
+              <Link
+                to="/requests"
+                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-indigo-700 hover:shadow-md active:scale-95 transition-all duration-200"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                Request Help
+              </Link>
 
-          <Link
-            to="/helpboard"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
-          >
-            Help Board
-          </Link>
+              <Link
+                to="/helpboard"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
+              >
+                Help Board
+              </Link>
 
-          <Link
-            to="/invitations"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
-          >
-            My Invitations
-          </Link>
+              <Link
+                to="/invitations"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
+              >
+                My Invitations
+              </Link>
 
-          <Link
-            to="/myrequests"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
-          >
-            My Requests
-          </Link>
+              <Link
+                to="/myrequests"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
+              >
+                My Requests
+              </Link>
+            </>
+          )}
+          {currentUser?.role === 'admin' && (
+            <Link
+              to="/helpboard"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-800 text-sm font-medium rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 active:scale-95 transition-all duration-200"
+            >
+              Help Board
+            </Link>
+          )}
+          
         </div>
       </div>
 
@@ -395,11 +454,20 @@ const HelpBoard = () => {
                     {req.topic}
                   </h3>
                   </button>
-                  <span
-                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide flex-shrink-0 ${getUrgencyColor(req.urgencyLevel)}`}
-                  >
-                    {req.urgencyLevel}
-                  </span>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${getUrgencyColor(req.urgencyLevel)}`}
+                    >
+                      {req.urgencyLevel}
+                    </span>
+                    {req.status && (
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${getStatusColor(req.status)}`}
+                      >
+                        {req.status}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-sm text-slate-500 mb-4">
@@ -445,20 +513,36 @@ const HelpBoard = () => {
                   <Clock size={14} strokeWidth={2} />
                   {formatTime(req.createdAt)}
                 </div>
-                <button
-                  onClick={() => handleOfferHelp(req._id)}
-                  disabled={
-                    actionLoading === req._id ||
-                    String(req.requester?._id || "") === String(currentUser?._id || "")
-                  }
-                  className="flex items-center gap-1.5 px-5 py-1.5 text-white text-sm font-medium rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 shadow-sm"
-                >
-                  {actionLoading === req._id
-                    ? "Locking Request..."
-                    : String(req.requester?._id || "") === String(currentUser?._id || "")
-                      ? "Your Request"
-                      : "Offer Help"}
-                </button>
+                
+                {currentUser?.role === 'admin' ? (
+                  <button
+                    onClick={() => handleDeleteRequest(req._id)}
+                    disabled={actionLoading === req._id}
+                    className="flex items-center gap-1.5 px-4 py-1.5 text-white text-sm font-medium rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700 shadow-sm"
+                  >
+                    <Trash2 size={14} strokeWidth={2} />
+                    {actionLoading === req._id ? "Removing..." : "Remove"}
+                  </button>
+                ) : req.status === 'Resolved' ? (
+                  <span className="text-xs font-medium px-3 py-1.5 bg-green-100 text-green-700 rounded-lg border border-green-300">
+                    ✓ Resolved
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => handleOfferHelp(req._id)}
+                    disabled={
+                      actionLoading === req._id ||
+                      String(req.requester?._id || "") === String(currentUser?._id || "")
+                    }
+                    className="flex items-center gap-1.5 px-5 py-1.5 text-white text-sm font-medium rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 shadow-sm"
+                  >
+                    {actionLoading === req._id
+                      ? "Locking Request..."
+                      : String(req.requester?._id || "") === String(currentUser?._id || "")
+                        ? "Your Request"
+                        : "Offer Help"}
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -478,7 +562,7 @@ const HelpBoard = () => {
        <RequestDetailModal
         request={selectedRequest}
         onClose={() => setSelectedRequest(null)}
-        showOfferHelp={true}
+        showOfferHelp={currentUser?.role !== 'admin'}
         onOfferHelp={handleOfferHelp}
         actionLoading={actionLoading === selectedRequest?._id}
       />

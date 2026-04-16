@@ -120,7 +120,7 @@ const ChatRoom = () => {
   };
 
   //Resolve request 
-  const handleResolve = async () => {
+  const handleResolve = async (publishSummary = false) => {
     if (rating === 0) {
       alert('Please select a rating before submitting.');
       return;
@@ -131,7 +131,7 @@ const ChatRoom = () => {
       const res   = await fetch(`${REQUEST_API}/${requestId}/resolve`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ summary, rating }),
+        body: JSON.stringify({ summary, rating, publishSummary }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -435,11 +435,18 @@ const ChatRoom = () => {
                 Cancel
               </button>
               <button
-                onClick={handleResolve}
+                onClick={() => handleResolve(false)}
+                disabled={rating === 0 || resolving}
+                className="flex-1 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {resolving ? 'Solving...' : 'Solve'}
+              </button>
+              <button
+                onClick={() => handleResolve(true)}
                 disabled={rating === 0 || resolving}
                 className="flex-1 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {resolving ? 'Submitting...' : 'Submit & Close'}
+                {resolving ? 'Publishing...' : 'Solve & Publish'}
               </button>
             </div>
           </div>

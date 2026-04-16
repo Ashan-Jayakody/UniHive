@@ -45,6 +45,10 @@ const helpRequestSchema = new mongoose.Schema({
     summary: {
         type: String
     },
+    publishSummary: {
+        type: Boolean,
+        default: false
+    },
     // this will use for direct chat and Q&A board
     discussion: [{
         sender: {

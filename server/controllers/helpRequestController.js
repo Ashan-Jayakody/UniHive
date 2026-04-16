@@ -30,7 +30,7 @@ const createHelpRequest = async (req, res) => {
         const suggestedHelpers = await User.find({
             _id: {$ne: req.user._id},
             expertiseAreas: {$in: parsedTags}
-        }).sort({rating:-1}).limit(3).select('name expertiseAreas rating');
+        }).sort({points:-1}).limit(3).select('name expertiseAreas points');
 
         res.status(201).json({
             success: true,
@@ -182,7 +182,7 @@ const addMessage = async (req, res) => {
 const resolveHelpRequest = async(req, res) => {
     try {
         const requestId = req.params.id;
-        const { summary, rating } = req.body;
+        const { summary, rating, publishSummary } = req.body;
         const requesterId = req.user._id;
 
         const helpRequest = await HelpRequest.findById(requestId);
@@ -199,15 +199,16 @@ const resolveHelpRequest = async(req, res) => {
         }
 
         helpRequest.status = 'Resolved';
-        helpRequest.summary = summary;
-        helpRequest.rating = rating;
+        helpRequest.summary = summary || '';
+        helpRequest.publishSummary = publishSummary || false;
+        helpRequest.rating = rating || 0;
         
         const updatedRequest = await helpRequest.save();
 
         if (helpRequest.acceptedHelper) {
             await User.findByIdAndUpdate(
                 helpRequest.acceptedHelper,
-                { $inc: { reputationPoints: rating } } 
+                { $inc: { points: rating || 0 } } 
             );
         }
 
@@ -221,16 +222,21 @@ const resolveHelpRequest = async(req, res) => {
         console.error("RESOLVE ERROR:", error);
         res.status(500).json({ error: "Failed to resolve request", details: error.message });
     }
-};
+};;
 
 
 //get open requests for the public board
 // GET/api/request
 const getOpenRequests = async(req, res) => {
     try {
-        const requests = await HelpRequest.find({status: 'Open'})
+        const requests = await HelpRequest.find({
+            $or: [
+                { status: 'Open' },
+                { status: 'Resolved', publishSummary: true }
+            ]
+        })
             .populate('requester', 'name faculty academicYear')
-            .sort({createdAt: -1})
+            .sort({status: 1, createdAt: -1})
         
         res.status(200).json({success: true, requests });
     } catch (error) {
@@ -328,13 +334,45 @@ const getMessages = async (req, res) => {
     }
 };
 
-// delete a help request
+// delete a help request (admin only)
 // DELETE/api/request/:id
+const deleteHelpRequest = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                error: "Only admins can delete help requests"
+            });
+        }
 
-    
+        const helpRequest = await HelpRequest.findByIdAndDelete(requestId);
+        
+        if (!helpRequest) {
+            return res.status(404).json({
+                success: false,
+                error: "Help request not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Help request removed successfully"
+        });
+    } catch (error) {
+        console.error("Delete Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to delete help request",
+            details: error.message
+        });
+    }
+};
 
 module.exports = {
     createHelpRequest,inviteExperts,acceptHelpRequest,addMessage, 
     resolveHelpRequest, getOpenRequests, getMyInvitations, getMyRequests, 
-    getSingleRequest, getMyTasks, getMessages
+    getSingleRequest, getMyTasks, getMessages, deleteHelpRequest
 };
