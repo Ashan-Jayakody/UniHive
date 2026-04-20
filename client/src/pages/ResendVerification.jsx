@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Toast from '../components/Toast';
 
-const API_BASE = 'http://localhost:8000/api/auth';
+const API_BASE = 'http://localhost:5000/api/auth';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const ResendVerification = () => {
   const [email, setEmail] = useState('');
@@ -23,8 +24,28 @@ const ResendVerification = () => {
     setToast({ show: false, type: 'success', message: '' });
   };
 
+  const validateForm = () => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      return 'Email address is required.';
+    }
+
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      return 'Please enter a valid email address.';
+    }
+
+    return null;
+  };
+
   const handleResend = async (e) => {
     e.preventDefault();
+
+    const validationError = validateForm();
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -33,7 +54,7 @@ const ResendVerification = () => {
       const response = await fetch(`${API_BASE}/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
       const data = await response.json();
@@ -64,15 +85,13 @@ const ResendVerification = () => {
           Enter your registered email address to generate a new email verification token.
         </p>
 
-        <form onSubmit={handleResend} className="mt-6 grid gap-4">
+        <form onSubmit={handleResend} className="mt-6 grid gap-4" noValidate>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Email Address
-            </label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value.trimStart())}
               required
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               placeholder="Enter your registered email address"

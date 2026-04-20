@@ -6,7 +6,27 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:8000/api/users';
+const API_BASE = 'http://localhost:5000/api/users';
+
+const capitalizeName = (value) => {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .trimStart()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word
+        .split(/([-'])/)
+        .map((part) =>
+          part === '-' || part === "'"
+            ? part
+            : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join('')
+    )
+    .join(' ');
+};
 
 const UserManagement = () => {
   const navigate = useNavigate();
@@ -125,7 +145,12 @@ const UserManagement = () => {
         },
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server did not return valid JSON (status ${response.status})`);
+      }
 
       if (!response.ok) {
         throw new Error(data.message || `Request failed with status ${response.status}`);
@@ -248,9 +273,19 @@ const UserManagement = () => {
   const handleEditChange = (e) => {
     const { name, value, type, checked } = e.target;
 
+    let nextValue = type === 'checkbox' ? checked : value;
+
+    if (name === 'name') {
+      nextValue = capitalizeName(value);
+    }
+
+    if (name === 'email') {
+      nextValue = value.trimStart().toLowerCase();
+    }
+
     let updatedForm = {
       ...editForm,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: nextValue,
     };
 
     if (name === 'role') {
@@ -326,7 +361,12 @@ const UserManagement = () => {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server did not return valid JSON (status ${response.status})`);
+      }
 
       if (!response.ok) throw new Error(data.message || 'Unable to update user record');
 
@@ -352,7 +392,12 @@ const UserManagement = () => {
         },
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server did not return valid JSON (status ${response.status})`);
+      }
 
       if (!response.ok) throw new Error(data.message || 'Unable to delete user record');
 
@@ -369,7 +414,8 @@ const UserManagement = () => {
     setConfirmState({
       open: true,
       title: 'Delete User Account',
-      message: 'Are you sure you want to permanently remove this user account? This action cannot be reversed.',
+      message:
+        'Are you sure you want to permanently remove this user account? This action cannot be reversed.',
       confirmText: 'Delete',
       confirmType: 'danger',
       onConfirm: async () => {
@@ -737,7 +783,7 @@ const UserManagement = () => {
                 <input type="number" name="points" value={editForm.points} onChange={handleEditChange} disabled={savingUser} className={inputStyle} />
               </div>
 
-              <div className="md:col-span-2 grid gap-4 sm:grid-cols-3">
+              <div className="md:col-span-2 mt-2 flex gap-3">
                 <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
                   <input type="checkbox" name="helperBadge" checked={editForm.helperBadge} onChange={handleEditChange} disabled={savingUser} />
                   Helper Badge

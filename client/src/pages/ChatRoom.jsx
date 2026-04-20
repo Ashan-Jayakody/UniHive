@@ -3,7 +3,7 @@ import { Send, ArrowLeft, Star, CheckCircle } from 'lucide-react';
 import { socket } from '../socket';
 import { useNavigate, useParams } from 'react-router-dom';
 
-const REQUEST_API = 'http://localhost:8000/api/request';
+const REQUEST_API = 'http://localhost:5000/api/request';
 
 const ChatRoom = () => {
   const { id: requestId } = useParams();
@@ -230,16 +230,16 @@ const ChatRoom = () => {
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
                 Attachment
               </p>
-              {attachment.match(/\.(jpeg|jpg|png|gif)$/i) ? (
+              {attachment.match(/\.(jpeg|jpg|png|gif)(\?.*)?$/i) ? (
                 <img
-                  src={`http://localhost:8000${attachment}`}
+                  src={attachment.startsWith('http') ? attachment : `http://localhost:5000${attachment}`}
                   alt="Attachment"
                   className="max-h-40 rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(`http://localhost:8000${attachment}`, '_blank')}
+                  onClick={() => window.open(attachment.startsWith('http') ? attachment : `http://localhost:5000${attachment}`, '_blank')}
                 />
               ) : (
                 <a
-                  href={`http://localhost:8000${attachment}`}
+                  href={attachment.startsWith('http') ? attachment : `http://localhost:5000${attachment}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-xs font-medium bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100"

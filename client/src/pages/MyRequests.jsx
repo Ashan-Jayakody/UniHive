@@ -15,7 +15,7 @@ const MyRequests = () => {
   const fetchMyRequests = async () => {
     try {
       const token    = typeof window !== "undefined" ? localStorage.getItem('token') : null;
-      const response = await fetch('http://localhost:8000/api/request/myrequests', {
+      const response = await fetch('http://localhost:5000/api/request/myrequests', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
@@ -227,7 +227,7 @@ const MyRequests = () => {
                   {req.status === 'Resolved' && (
                     <button
                       onClick={() => navigate(`/chat/${req._id}`)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 transition-all active:scale-95"
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-all active:scale-95"
                     >
                       View history
                     </button>

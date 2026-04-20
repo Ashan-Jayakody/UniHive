@@ -5,7 +5,100 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:8000/api/threads';
+const API_BASE = 'http://localhost:5000/api/threads';
+
+const THREAD_TITLE_MIN = 5;
+const THREAD_TITLE_MAX = 120;
+const THREAD_CONTENT_MIN = 10;
+const THREAD_CONTENT_MAX = 2000;
+const REPLY_MIN = 2;
+const REPLY_MAX = 1000;
+
+const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const validateThreadForm = (thread) => {
+  const title = sanitizeText(thread.title);
+  const topic = sanitizeText(thread.topic);
+  const content = sanitizeText(thread.content);
+
+  if (!title) return 'Discussion title is required.';
+  if (title.length < THREAD_TITLE_MIN) {
+    return `Discussion title must be at least ${THREAD_TITLE_MIN} characters long.`;
+  }
+  if (title.length > THREAD_TITLE_MAX) {
+    return `Discussion title must be ${THREAD_TITLE_MAX} characters or less.`;
+  }
+
+  if (!topic) return 'Please select a discussion topic.';
+
+  if (!content) return 'Discussion content is required.';
+  if (content.length < THREAD_CONTENT_MIN) {
+    return `Discussion content must be at least ${THREAD_CONTENT_MIN} characters long.`;
+  }
+  if (content.length > THREAD_CONTENT_MAX) {
+    return `Discussion content must be ${THREAD_CONTENT_MAX} characters or less.`;
+  }
+
+  return null;
+};
+
+const validateReplyText = (text) => {
+  const cleanText = sanitizeText(text);
+
+  if (!cleanText) return 'Reply text is required.';
+  if (cleanText.length < REPLY_MIN) {
+    return `Reply must be at least ${REPLY_MIN} characters long.`;
+  }
+  if (cleanText.length > REPLY_MAX) {
+    return `Reply must be ${REPLY_MAX} characters or less.`;
+  }
+
+  return null;
+};
+
+const getThreadFieldError = (name, value) => {
+  const cleanValue = sanitizeText(value);
+
+  if (name === 'title') {
+    if (!cleanValue) return 'Discussion title is required.';
+    if (cleanValue.length < THREAD_TITLE_MIN) {
+      return `Title must be at least ${THREAD_TITLE_MIN} characters.`;
+    }
+    if (cleanValue.length > THREAD_TITLE_MAX) {
+      return `Title must be ${THREAD_TITLE_MAX} characters or less.`;
+    }
+  }
+
+  if (name === 'topic') {
+    if (!cleanValue) return 'Topic is required.';
+  }
+
+  if (name === 'content') {
+    if (!cleanValue) return 'Discussion content is required.';
+    if (cleanValue.length < THREAD_CONTENT_MIN) {
+      return `Content must be at least ${THREAD_CONTENT_MIN} characters.`;
+    }
+    if (cleanValue.length > THREAD_CONTENT_MAX) {
+      return `Content must be ${THREAD_CONTENT_MAX} characters or less.`;
+    }
+  }
+
+  return '';
+};
+
+const getReplyFieldError = (value) => {
+  const cleanValue = sanitizeText(value);
+
+  if (!cleanValue) return 'Reply is required.';
+  if (cleanValue.length < REPLY_MIN) {
+    return `Reply must be at least ${REPLY_MIN} characters.`;
+  }
+  if (cleanValue.length > REPLY_MAX) {
+    return `Reply must be ${REPLY_MAX} characters or less.`;
+  }
+
+  return '';
+};
 
 const AcademicCommunication = () => {
   const [threads, setThreads] = useState([]);
@@ -64,6 +157,20 @@ const AcademicCommunication = () => {
 
   const [replyInputs, setReplyInputs] = useState({});
   const [editReplyInputs, setEditReplyInputs] = useState({});
+
+  const [threadErrors, setThreadErrors] = useState({
+    title: '',
+    topic: '',
+    content: '',
+  });
+
+  const [replyErrors, setReplyErrors] = useState({});
+  const [editReplyErrors, setEditReplyErrors] = useState({});
+  const [editThreadErrors, setEditThreadErrors] = useState({
+    title: '',
+    topic: '',
+    content: '',
+  });
 
   const topicOptions = ['All', 'General', 'Academics', 'Projects', 'Internships', 'Events'];
 
@@ -225,10 +332,41 @@ const AcademicCommunication = () => {
     }
   };
 
-  const handleNewThreadChange = (e) => setNewThread({ ...newThread, [e.target.name]: e.target.value });
+  const handleNewThreadChange = (e) => {
+    const { name, value } = e.target;
+
+    setNewThread((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setThreadErrors((prev) => ({
+      ...prev,
+      [name]: getThreadFieldError(name, value),
+    }));
+  };
 
   const handleCreateThread = async (e) => {
     e.preventDefault();
+
+    const currentErrors = {
+      title: getThreadFieldError('title', newThread.title),
+      topic: getThreadFieldError('topic', newThread.topic),
+      content: getThreadFieldError('content', newThread.content),
+    };
+
+    setThreadErrors(currentErrors);
+
+    if (currentErrors.title || currentErrors.topic || currentErrors.content) {
+      showToast('error', 'Please fix the discussion form errors before submitting.');
+      return;
+    }
+
+    const validationError = validateThreadForm(newThread);
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
 
     try {
       setPostingThread(true);
@@ -239,7 +377,11 @@ const AcademicCommunication = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
-        body: JSON.stringify(newThread),
+        body: JSON.stringify({
+          title: sanitizeText(newThread.title),
+          topic: sanitizeText(newThread.topic),
+          content: sanitizeText(newThread.content),
+        }),
       });
 
       const data = await response.json();
@@ -247,6 +389,7 @@ const AcademicCommunication = () => {
       if (!response.ok) throw new Error(data.message || 'Unable to publish discussion');
 
       setNewThread({ title: '', topic: 'General', content: '' });
+      setThreadErrors({ title: '', topic: '', content: '' });
       setShowCreateForm(false);
       await fetchThreads();
       showToast('success', 'Discussion published successfully');
@@ -264,6 +407,11 @@ const AcademicCommunication = () => {
       topic: thread.topic,
       content: thread.content,
     });
+    setEditThreadErrors({
+      title: '',
+      topic: '',
+      content: '',
+    });
   };
 
   const closeEditThread = () => {
@@ -273,11 +421,47 @@ const AcademicCommunication = () => {
       topic: 'General',
       content: '',
     });
+    setEditThreadErrors({
+      title: '',
+      topic: '',
+      content: '',
+    });
   };
 
-  const handleEditThreadChange = (e) => setEditThreadForm({ ...editThreadForm, [e.target.name]: e.target.value });
+  const handleEditThreadChange = (e) => {
+    const { name, value } = e.target;
+
+    setEditThreadForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setEditThreadErrors((prev) => ({
+      ...prev,
+      [name]: getThreadFieldError(name, value),
+    }));
+  };
 
   const handleSaveThreadEdit = async (threadId) => {
+    const currentErrors = {
+      title: getThreadFieldError('title', editThreadForm.title),
+      topic: getThreadFieldError('topic', editThreadForm.topic),
+      content: getThreadFieldError('content', editThreadForm.content),
+    };
+
+    setEditThreadErrors(currentErrors);
+
+    if (currentErrors.title || currentErrors.topic || currentErrors.content) {
+      showToast('error', 'Please fix the discussion edit errors before saving.');
+      return;
+    }
+
+    const validationError = validateThreadForm(editThreadForm);
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
+
     try {
       setSavingThreadEdit(true);
 
@@ -287,7 +471,11 @@ const AcademicCommunication = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
-        body: JSON.stringify(editThreadForm),
+        body: JSON.stringify({
+          title: sanitizeText(editThreadForm.title),
+          topic: sanitizeText(editThreadForm.topic),
+          content: sanitizeText(editThreadForm.content),
+        }),
       });
 
       const data = await response.json();
@@ -304,79 +492,19 @@ const AcademicCommunication = () => {
     }
   };
 
-  const handleReplyInputChange = (threadId, value) => {
-    setReplyInputs((prev) => ({ ...prev, [threadId]: value }));
-  };
-
-  const handleAddReply = async (threadId) => {
-    const replyText = replyInputs[threadId]?.trim();
-    if (!replyText) return;
-
-    try {
-      setReplyingThreadId(threadId);
-
-      const response = await fetch(`${API_BASE}/${threadId}/replies`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-        body: JSON.stringify({ text: replyText }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || 'Unable to post reply');
-
-      setReplyInputs((prev) => ({ ...prev, [threadId]: '' }));
-      await fetchThreads();
-      showToast('success', 'Reply submitted successfully');
-    } catch (error) {
-      showToast('error', error.message);
-    } finally {
-      setReplyingThreadId(null);
-    }
-  };
-
-  const openEditReply = (replyId, currentText) => {
-    setEditingReplyId(replyId);
-    setEditReplyInputs((prev) => ({ ...prev, [replyId]: currentText }));
-  };
-
-  const closeEditReply = () => setEditingReplyId(null);
-
-  const handleEditReplyInputChange = (replyId, value) => {
-    setEditReplyInputs((prev) => ({ ...prev, [replyId]: value }));
-  };
-
-  const handleSaveReplyEdit = async (threadId, replyId) => {
-    const text = editReplyInputs[replyId]?.trim();
-    if (!text) return;
-
-    try {
-      setSavingReplyEditId(replyId);
-
-      const response = await fetch(`${API_BASE}/${threadId}/replies/${replyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || 'Unable to update reply');
-
-      setEditingReplyId(null);
-      await fetchThreads();
-      showToast('success', 'Reply updated successfully');
-    } catch (error) {
-      showToast('error', error.message);
-    } finally {
-      setSavingReplyEditId(null);
-    }
+  const openDeleteThreadConfirm = (threadId) => {
+    setConfirmState({
+      open: true,
+      title: 'Delete Discussion',
+      message:
+        'This discussion and all associated replies will be permanently removed. Do you want to continue?',
+      confirmText: 'Delete',
+      confirmType: 'danger',
+      onConfirm: async () => {
+        closeConfirm();
+        await handleDeleteThread(threadId);
+      },
+    });
   };
 
   const handleDeleteThread = async (threadId) => {
@@ -394,14 +522,160 @@ const AcademicCommunication = () => {
 
       if (!response.ok) throw new Error(data.message || 'Unable to delete discussion');
 
+      if (editingThreadId === threadId) {
+        closeEditThread();
+      }
+
       await fetchThreads();
-      await fetchSavedThreads();
       showToast('success', 'Discussion deleted successfully');
     } catch (error) {
       showToast('error', error.message);
     } finally {
       setDeletingThreadId(null);
     }
+  };
+
+  const handleReplyInputChange = (threadId, value) => {
+    setReplyInputs((prev) => ({ ...prev, [threadId]: value }));
+
+    setReplyErrors((prev) => ({
+      ...prev,
+      [threadId]: getReplyFieldError(value),
+    }));
+  };
+
+  const handleAddReply = async (threadId) => {
+    const replyText = replyInputs[threadId] || '';
+    const currentError = getReplyFieldError(replyText);
+
+    setReplyErrors((prev) => ({
+      ...prev,
+      [threadId]: currentError,
+    }));
+
+    if (currentError) {
+      showToast('error', currentError);
+      return;
+    }
+
+    const validationError = validateReplyText(replyText);
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
+
+    try {
+      setReplyingThreadId(threadId);
+
+      const response = await fetch(`${API_BASE}/${threadId}/replies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({ text: sanitizeText(replyText) }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.message || 'Unable to post reply');
+
+      setReplyInputs((prev) => ({ ...prev, [threadId]: '' }));
+      setReplyErrors((prev) => ({ ...prev, [threadId]: '' }));
+      await fetchThreads();
+      showToast('success', 'Reply submitted successfully');
+    } catch (error) {
+      showToast('error', error.message);
+    } finally {
+      setReplyingThreadId(null);
+    }
+  };
+
+  const openEditReply = (reply) => {
+    setEditingReplyId(reply._id);
+    setEditReplyInputs((prev) => ({
+      ...prev,
+      [reply._id]: reply.text,
+    }));
+    setEditReplyErrors((prev) => ({
+      ...prev,
+      [reply._id]: '',
+    }));
+  };
+
+  const closeEditReply = () => {
+    setEditingReplyId(null);
+  };
+
+  const handleEditReplyInputChange = (replyId, value) => {
+    setEditReplyInputs((prev) => ({ ...prev, [replyId]: value }));
+
+    setEditReplyErrors((prev) => ({
+      ...prev,
+      [replyId]: getReplyFieldError(value),
+    }));
+  };
+
+  const handleSaveReplyEdit = async (threadId, replyId) => {
+    const text = editReplyInputs[replyId] || '';
+    const currentError = getReplyFieldError(text);
+
+    setEditReplyErrors((prev) => ({
+      ...prev,
+      [replyId]: currentError,
+    }));
+
+    if (currentError) {
+      showToast('error', currentError);
+      return;
+    }
+
+    const validationError = validateReplyText(text);
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
+
+    try {
+      setSavingReplyEditId(replyId);
+
+      const response = await fetch(`${API_BASE}/${threadId}/replies/${replyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({ text: sanitizeText(text) }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.message || 'Unable to update reply');
+
+      setEditingReplyId(null);
+      setEditReplyInputs((prev) => ({ ...prev, [replyId]: '' }));
+      setEditReplyErrors((prev) => ({ ...prev, [replyId]: '' }));
+      await fetchThreads();
+      showToast('success', 'Reply updated successfully');
+    } catch (error) {
+      showToast('error', error.message);
+    } finally {
+      setSavingReplyEditId(null);
+    }
+  };
+
+  const openDeleteReplyConfirm = (threadId, replyId) => {
+    setConfirmState({
+      open: true,
+      title: 'Delete Reply',
+      message: 'This reply will be permanently removed. Do you want to continue?',
+      confirmText: 'Delete',
+      confirmType: 'danger',
+      onConfirm: async () => {
+        closeConfirm();
+        await handleDeleteReply(threadId, replyId);
+      },
+    });
   };
 
   const handleDeleteReply = async (threadId, replyId) => {
@@ -419,6 +693,10 @@ const AcademicCommunication = () => {
 
       if (!response.ok) throw new Error(data.message || 'Unable to delete reply');
 
+      if (editingReplyId === replyId) {
+        closeEditReply();
+      }
+
       await fetchThreads();
       showToast('success', 'Reply deleted successfully');
     } catch (error) {
@@ -428,72 +706,17 @@ const AcademicCommunication = () => {
     }
   };
 
-  const askDeleteThread = (threadId) => {
-    setConfirmState({
-      open: true,
-      title: 'Delete Discussion',
-      message: 'Are you sure you want to permanently remove this discussion record?',
-      confirmText: 'Delete',
-      confirmType: 'danger',
-      onConfirm: async () => {
-        closeConfirm();
-        await handleDeleteThread(threadId);
-      },
-    });
-  };
-
-  const askDeleteReply = (threadId, replyId) => {
-    setConfirmState({
-      open: true,
-      title: 'Delete Reply',
-      message: 'Are you sure you want to permanently remove this reply?',
-      confirmText: 'Delete',
-      confirmType: 'danger',
-      onConfirm: async () => {
-        closeConfirm();
-        await handleDeleteReply(threadId, replyId);
-      },
-    });
-  };
-
-  const topicBadgeStyle = (topic) => {
-    if (topic === 'Projects') return 'bg-blue-50 text-blue-700 ring-blue-100';
-    if (topic === 'Academics') return 'bg-green-50 text-green-700 ring-green-100';
-    if (topic === 'Internships') return 'bg-purple-50 text-purple-700 ring-purple-100';
-    if (topic === 'Events') return 'bg-orange-50 text-orange-700 ring-orange-100';
-    return 'bg-slate-100 text-slate-700 ring-slate-200';
-  };
-
-  const formatTimestamp = (dateValue) => {
-    if (!dateValue) return '';
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return '';
-
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-
-    return date.toLocaleString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+  const handleSearchSubmit = async (e) => {
+    e.preventDefault();
+    setPage(1);
+    await fetchThreads();
   };
 
   const stats = [
     {
-      title: 'Total Discussions',
-      value: loading ? '...' : pagination.total,
-      subtitle: 'Discussion records matching the current selection.',
+      title: 'Visible Discussions',
+      value: pagination.total || threads.length,
+      subtitle: 'Discussion records currently available in the academic communication module.',
       badge: 'Threads',
       cardClass: 'bg-blue-50 ring-1 ring-blue-100',
       valueClass: 'text-blue-700',
@@ -501,18 +724,18 @@ const AcademicCommunication = () => {
     {
       title: 'Saved Discussions',
       value: savedThreadIds.length,
-      subtitle: 'Discussions retained for future reference.',
+      subtitle: 'Threads that you bookmarked for later academic reference.',
       badge: 'Saved',
       cardClass: 'bg-green-50 ring-1 ring-green-100',
       valueClass: 'text-green-700',
     },
     {
-      title: 'Visible Records',
-      value: loading ? '...' : threads.length,
-      subtitle: 'Discussions currently shown on this page.',
-      badge: 'View',
-      cardClass: 'bg-slate-100 ring-1 ring-slate-200',
-      valueClass: 'text-slate-900',
+      title: 'Current Page',
+      value: pagination.page,
+      subtitle: 'Pagination position within the discussion board.',
+      badge: 'Page',
+      cardClass: 'bg-purple-50 ring-1 ring-purple-100',
+      valueClass: 'text-purple-700',
     },
   ];
 
@@ -526,15 +749,14 @@ const AcademicCommunication = () => {
         message={confirmState.message}
         confirmText={confirmState.confirmText}
         confirmType={confirmState.confirmType}
-        loading={false}
         onConfirm={confirmState.onConfirm}
         onCancel={closeConfirm}
       />
 
       <div className="mx-auto max-w-7xl space-y-6">
         <AppHeader
-          title="Academic Communication Hub"
-          subtitle="Manage academic discussions, participate in structured conversations, and retain important records through a more professional communication workspace."
+          title="Academic Communication"
+          subtitle="Create, manage, search, filter, reply to, save, and review structured academic discussions through one collaborative communication hub."
         />
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -543,356 +765,498 @@ const AcademicCommunication = () => {
           ))}
         </div>
 
-        <PanelCard eyebrow="Discussion Workspace" title="Search, Filter, and Manage Discussions">
-          <div className="mb-6 flex flex-col gap-5 border-b border-slate-200 pb-6 lg:flex-row lg:items-center lg:justify-between">
-            <p className="max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-              Access topic-based academic conversations, respond to peers, sort discussion records by relevance,
-              and retain important threads for later reference.
-            </p>
+        <PanelCard eyebrow="Discussion Controls" title="Search, Filter, and Create Discussions">
+          <div className="grid gap-5 xl:grid-cols-[1.5fr_0.75fr]">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_150px_150px_110px]"
+            >
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search discussions..."
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setShowCreateForm((prev) => !prev)}
-                className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              <select
+                value={selectedTopic}
+                onChange={(e) => {
+                  setSelectedTopic(e.target.value);
+                  setPage(1);
+                }}
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
-                {showCreateForm ? 'Close Discussion Form' : 'Create New Discussion'}
+                {topicOptions.map((topic) => (
+                  <option key={topic} value={topic}>
+                    {topic}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setPage(1);
+                }}
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="latest">Latest</option>
+                <option value="oldest">Oldest</option>
+                <option value="latest-activity">Activity</option>
+                <option value="most-replies">Replies</option>
+              </select>
+
+              <button
+                type="submit"
+                className="h-12 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                Apply
+              </button>
+            </form>
+
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Discussion Publishing
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                Start a New Academic Discussion
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Publish a structured topic or ask a question.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowCreateForm((prev) => !prev)}
+                className="mt-4 h-11 rounded-2xl bg-green-600 px-5 text-sm font-semibold text-white transition hover:bg-green-700"
+              >
+                {showCreateForm ? 'Close Form' : 'Create Discussion'}
               </button>
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-4">
-            <input
-              type="text"
-              placeholder="Search by title, content, or author..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            />
-
-            <select
-              value={selectedTopic}
-              onChange={(e) => {
-                setSelectedTopic(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
+          {showCreateForm && (
+            <form
+              onSubmit={handleCreateThread}
+              className="mt-5 grid gap-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm"
             >
-              {topicOptions.map((topic) => (
-                <option key={topic} value={topic}>{topic}</option>
+              <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Discussion Title</label>
+                  <input
+                    name="title"
+                    maxLength={THREAD_TITLE_MAX}
+                    value={newThread.title}
+                    onChange={handleNewThreadChange}
+                    placeholder="Enter a clear discussion title"
+                    className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                      threadErrors.title
+                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                        : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                    }`}
+                  />
+                  {threadErrors.title && (
+                    <p className="mt-2 text-xs font-medium text-red-600">{threadErrors.title}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Topic</label>
+                  <select
+                    name="topic"
+                    value={newThread.topic}
+                    onChange={handleNewThreadChange}
+                    className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                      threadErrors.topic
+                        ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                        : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                    }`}
+                  >
+                    {topicOptions
+                      .filter((item) => item !== 'All')
+                      .map((topic) => (
+                        <option key={topic} value={topic}>
+                          {topic}
+                        </option>
+                      ))}
+                  </select>
+                  {threadErrors.topic && (
+                    <p className="mt-2 text-xs font-medium text-red-600">{threadErrors.topic}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Discussion Content</label>
+                <textarea
+                  name="content"
+                  maxLength={THREAD_CONTENT_MAX}
+                  value={newThread.content}
+                  onChange={handleNewThreadChange}
+                  rows="5"
+                  placeholder="Write the discussion content here"
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                    threadErrors.content
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
+                />
+                {threadErrors.content && (
+                  <p className="mt-2 text-xs font-medium text-red-600">{threadErrors.content}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={postingThread}
+                  className="h-11 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {postingThread ? 'Publishing...' : 'Publish Discussion'}
+                </button>
+              </div>
+            </form>
+          )}
+        </PanelCard>
+
+        <PanelCard eyebrow="Discussion Board" title="Available Academic Discussions">
+          {loading ? (
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-8 text-center text-sm font-semibold text-slate-600 shadow-sm">
+              Loading academic communication records...
+            </div>
+          ) : threads.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-8 text-center text-sm font-semibold text-slate-600 shadow-sm">
+              No discussion records are currently available for the selected criteria.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {threads.map((thread) => (
+                <div
+                  key={thread._id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm"
+                >
+                  {editingThreadId === thread._id ? (
+                    <div className="grid gap-4">
+                      <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">
+                            Discussion Title
+                          </label>
+                          <input
+                            name="title"
+                            maxLength={THREAD_TITLE_MAX}
+                            value={editThreadForm.title}
+                            onChange={handleEditThreadChange}
+                            className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                              editThreadErrors.title
+                                ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                                : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                            }`}
+                          />
+                          {editThreadErrors.title && (
+                            <p className="mt-2 text-xs font-medium text-red-600">
+                              {editThreadErrors.title}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">Topic</label>
+                          <select
+                            name="topic"
+                            value={editThreadForm.topic}
+                            onChange={handleEditThreadChange}
+                            className={`h-12 w-full rounded-2xl border px-4 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                              editThreadErrors.topic
+                                ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                                : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                            }`}
+                          >
+                            {topicOptions
+                              .filter((item) => item !== 'All')
+                              .map((topic) => (
+                                <option key={topic} value={topic}>
+                                  {topic}
+                                </option>
+                              ))}
+                          </select>
+                          {editThreadErrors.topic && (
+                            <p className="mt-2 text-xs font-medium text-red-600">
+                              {editThreadErrors.topic}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-slate-700">
+                          Discussion Content
+                        </label>
+                        <textarea
+                          name="content"
+                          maxLength={THREAD_CONTENT_MAX}
+                          value={editThreadForm.content}
+                          onChange={handleEditThreadChange}
+                          rows="5"
+                          className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                            editThreadErrors.content
+                              ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                              : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                          }`}
+                        />
+                        {editThreadErrors.content && (
+                          <p className="mt-2 text-xs font-medium text-red-600">
+                            {editThreadErrors.content}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSaveThreadEdit(thread._id)}
+                          disabled={savingThreadEdit}
+                          className="h-11 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {savingThreadEdit ? 'Saving...' : 'Save Changes'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={closeEditThread}
+                          className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-xl font-bold text-slate-900">{thread.title}</h3>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                              {thread.topic}
+                            </span>
+                          </div>
+
+                          <p className="mt-3 text-sm leading-7 text-slate-600">{thread.content}</p>
+
+                          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                            <span>Author: {thread.author || 'Unknown User'}</span>
+                            <span>
+                              Created:{' '}
+                              {thread.createdAt ? new Date(thread.createdAt).toLocaleString() : '-'}
+                            </span>
+                            <span>Replies: {Array.isArray(thread.replies) ? thread.replies.length : 0}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSaveThread(thread._id)}
+                            disabled={savingThreadId === thread._id}
+                            className={`h-10 rounded-2xl px-4 text-sm font-semibold transition ${
+                              isSaved(thread._id)
+                                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                            } disabled:cursor-not-allowed disabled:opacity-70`}
+                          >
+                            {savingThreadId === thread._id
+                              ? 'Updating...'
+                              : isSaved(thread._id)
+                              ? 'Saved'
+                              : 'Save'}
+                          </button>
+
+                          {canModifyThread(thread) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openEditThread(thread)}
+                                className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openDeleteThreadConfirm(thread._id)}
+                                disabled={deletingThreadId === thread._id}
+                                className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {deletingThreadId === thread._id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-4">
+                        <p className="text-sm font-semibold text-slate-800">Replies</p>
+
+                        {Array.isArray(thread.replies) && thread.replies.length > 0 ? (
+                          <div className="mt-4 space-y-4">
+                            {thread.replies.map((reply) => (
+                              <div
+                                key={reply._id}
+                                className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4"
+                              >
+                                {editingReplyId === reply._id ? (
+                                  <div className="grid gap-3">
+                                    <textarea
+                                      rows="4"
+                                      maxLength={REPLY_MAX}
+                                      value={editReplyInputs[reply._id] || ''}
+                                      onChange={(e) => handleEditReplyInputChange(reply._id, e.target.value)}
+                                      className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                                        editReplyErrors[reply._id]
+                                          ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                                          : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                                      }`}
+                                    />
+                                    {editReplyErrors[reply._id] && (
+                                      <p className="text-xs font-medium text-red-600">
+                                        {editReplyErrors[reply._id]}
+                                      </p>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSaveReplyEdit(thread._id, reply._id)}
+                                        disabled={savingReplyEditId === reply._id}
+                                        className="h-10 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                      >
+                                        {savingReplyEditId === reply._id ? 'Saving...' : 'Save Reply'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={closeEditReply}
+                                        className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                      <div>
+                                        <p className="text-sm font-semibold text-slate-900">
+                                          {reply.author || 'Unknown User'}
+                                        </p>
+                                        <p className="mt-2 text-sm leading-7 text-slate-600">{reply.text}</p>
+                                        <p className="mt-2 text-xs text-slate-500">
+                                          {reply.createdAt
+                                            ? new Date(reply.createdAt).toLocaleString()
+                                            : '-'}
+                                        </p>
+                                      </div>
+
+                                      {canModifyReply(reply) && (
+                                        <div className="flex flex-wrap gap-3">
+                                          <button
+                                            type="button"
+                                            onClick={() => openEditReply(reply)}
+                                            className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                          >
+                                            Edit
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openDeleteReplyConfirm(thread._id, reply._id)
+                                            }
+                                            disabled={deletingReplyId === reply._id}
+                                            className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                          >
+                                            {deletingReplyId === reply._id ? 'Deleting...' : 'Delete'}
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-sm text-slate-600">
+                            No replies have been added to this discussion yet.
+                          </p>
+                        )}
+
+                        <div className="mt-5 grid gap-3">
+                          <textarea
+                            rows="3"
+                            maxLength={REPLY_MAX}
+                            value={replyInputs[thread._id] || ''}
+                            onChange={(e) => handleReplyInputChange(thread._id, e.target.value)}
+                            placeholder="Write your reply here"
+                            className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-4 ${
+                              replyErrors[thread._id]
+                                ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                                : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                            }`}
+                          />
+                          {replyErrors[thread._id] && (
+                            <p className="text-xs font-medium text-red-600">
+                              {replyErrors[thread._id]}
+                            </p>
+                          )}
+
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleAddReply(thread._id)}
+                              disabled={replyingThreadId === thread._id}
+                              className="h-10 rounded-2xl bg-green-600 px-5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {replyingThreadId === thread._id ? 'Submitting...' : 'Submit Reply'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               ))}
-            </select>
+            </div>
+          )}
 
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
-            >
-              <option value="latest">Most Recent</option>
-              <option value="oldest">Oldest First</option>
-              <option value="latest-activity">Latest Activity</option>
-              <option value="most-replies">Most Replied</option>
-            </select>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm text-slate-600">
+              Page {pagination.page} of {pagination.totalPages}
+            </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setPage(1);
-                  fetchThreads();
-                }}
-                className="flex-1 rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!pagination.hasPrevPage}
+                className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Apply
+                Previous
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  setSearch('');
-                  setSelectedTopic('All');
-                  setSortBy('latest');
-                  setPage(1);
-                }}
-                className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={() => setPage((prev) => prev + 1)}
+                disabled={!pagination.hasNextPage}
+                className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Reset
+                Next
               </button>
             </div>
           </div>
         </PanelCard>
-
-        {showCreateForm && (
-          <PanelCard eyebrow="Create Discussion" title="Publish a New Academic Discussion">
-            <p className="text-sm text-slate-600">
-              Provide a clear title, assign a relevant category, and publish a discussion topic for the UniHive community.
-            </p>
-
-            <form onSubmit={handleCreateThread} className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Discussion Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={newThread.title}
-                  onChange={handleNewThreadChange}
-                  placeholder="Enter a clear discussion title"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Discussion Category</label>
-                <select
-                  name="topic"
-                  value={newThread.topic}
-                  onChange={handleNewThreadChange}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
-                >
-                  {topicOptions.filter((topic) => topic !== 'All').map((topic) => (
-                    <option key={topic} value={topic}>{topic}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Discussion Description</label>
-                <textarea
-                  name="content"
-                  value={newThread.content}
-                  onChange={handleNewThreadChange}
-                  rows="5"
-                  placeholder="Describe the academic topic, question, or issue to be discussed..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              <div className="md:col-span-2 flex gap-3">
-                <button type="submit" disabled={postingThread} className="rounded-2xl bg-green-600 px-5 py-3.5 text-base font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70">
-                  {postingThread ? 'Publishing...' : 'Publish Discussion'}
-                </button>
-                <button type="button" onClick={() => setShowCreateForm(false)} className="rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-base font-semibold text-slate-700 transition hover:bg-slate-50">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </PanelCard>
-        )}
-
-        <div className="grid gap-5">
-          {loading ? (
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
-              Loading discussions...
-            </div>
-          ) : threads.length === 0 ? (
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
-              No discussion records are available for the current criteria.
-            </div>
-          ) : (
-            threads.map((thread) => (
-              <div key={thread._id} className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="max-w-4xl">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${topicBadgeStyle(thread.topic)}`}>
-                        {thread.topic}
-                      </span>
-                      <span className="text-sm text-slate-500">Author: {thread.author}</span>
-                      <span className="text-sm text-slate-400">•</span>
-                      <span className="text-sm text-slate-500">{formatTimestamp(thread.createdAt)}</span>
-                    </div>
-
-                    {editingThreadId === thread._id ? (
-                      <div className="mt-4 space-y-4">
-                        <input
-                          type="text"
-                          name="title"
-                          value={editThreadForm.title}
-                          onChange={handleEditThreadChange}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                        />
-                        <select
-                          name="topic"
-                          value={editThreadForm.topic}
-                          onChange={handleEditThreadChange}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
-                        >
-                          {topicOptions.filter((topic) => topic !== 'All').map((topic) => (
-                            <option key={topic} value={topic}>{topic}</option>
-                          ))}
-                        </select>
-                        <textarea
-                          name="content"
-                          value={editThreadForm.content}
-                          onChange={handleEditThreadChange}
-                          rows="4"
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                        />
-                        <div className="flex gap-3">
-                          <button onClick={() => handleSaveThreadEdit(thread._id)} disabled={savingThreadEdit} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70">
-                            {savingThreadEdit ? 'Saving...' : 'Save Changes'}
-                          </button>
-                          <button onClick={closeEditThread} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <h3 className="mt-3 text-2xl font-bold text-slate-900">{thread.title}</h3>
-                        <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">{thread.content}</p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col items-end gap-3">
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-100">
-                      {thread.replies.length} {thread.replies.length === 1 ? 'reply' : 'replies'}
-                    </div>
-
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <button
-                        onClick={() => handleToggleSaveThread(thread._id)}
-                        disabled={savingThreadId === thread._id}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
-                          isSaved(thread._id)
-                            ? 'bg-amber-500 hover:bg-amber-600'
-                            : 'bg-indigo-600 hover:bg-indigo-700'
-                        }`}
-                      >
-                        {savingThreadId === thread._id
-                          ? 'Please wait...'
-                          : isSaved(thread._id)
-                          ? 'Saved'
-                          : 'Save'}
-                      </button>
-
-                      {canModifyThread(thread) && editingThreadId !== thread._id && (
-                        <>
-                          <button onClick={() => openEditThread(thread)} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700">
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => askDeleteThread(thread._id)}
-                            disabled={deletingThreadId === thread._id}
-                            className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            {deletingThreadId === thread._id ? 'Deleting...' : 'Delete'}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-green-700">Discussion Replies</p>
-
-                  <div className="mt-4 grid gap-3">
-                    {thread.replies.length === 0 ? (
-                      <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500 ring-1 ring-slate-100">
-                        No replies have been submitted yet. Be the first contributor to this discussion.
-                      </div>
-                    ) : (
-                      thread.replies.map((reply) => (
-                        <div key={reply._id || reply.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-semibold text-slate-800">{reply.author}</p>
-                              <span className="text-xs text-slate-400">•</span>
-                              <span className="text-xs text-slate-500">{formatTimestamp(reply.createdAt)}</span>
-                            </div>
-
-                            {canModifyReply(reply) && editingReplyId !== reply._id && (
-                              <div className="flex gap-2">
-                                <button onClick={() => openEditReply(reply._id, reply.text)} className="rounded-lg bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 transition hover:bg-green-200">
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => askDeleteReply(thread._id, reply._id)}
-                                  disabled={deletingReplyId === reply._id}
-                                  className="rounded-lg bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                  {deletingReplyId === reply._id ? 'Deleting...' : 'Delete'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          {editingReplyId === reply._id ? (
-                            <div className="mt-3 space-y-3">
-                              <textarea
-                                rows="3"
-                                value={editReplyInputs[reply._id] || ''}
-                                onChange={(e) => handleEditReplyInputChange(reply._id, e.target.value)}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                              />
-                              <div className="flex gap-2">
-                                <button onClick={() => handleSaveReplyEdit(thread._id, reply._id)} disabled={savingReplyEditId === reply._id} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70">
-                                  {savingReplyEditId === reply._id ? 'Saving...' : 'Save Changes'}
-                                </button>
-                                <button onClick={closeEditReply} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="mt-2 text-sm leading-7 text-slate-600">{reply.text}</p>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <input
-                      type="text"
-                      placeholder="Write a professional reply..."
-                      value={replyInputs[thread._id] || ''}
-                      onChange={(e) => handleReplyInputChange(thread._id, e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                    />
-                    <button
-                      onClick={() => handleAddReply(thread._id)}
-                      disabled={replyingThreadId === thread._id}
-                      className="rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {replyingThreadId === thread._id ? 'Submitting...' : 'Submit Reply'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-600">
-            Page {pagination.page} of {pagination.totalPages || 1}
-          </p>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              disabled={!pagination.hasPrevPage}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              Previous
-            </button>
-
-            <button
-              onClick={() => setPage((prev) => prev + 1)}
-              disabled={!pagination.hasNextPage}
-              className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              Next
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

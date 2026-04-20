@@ -8,7 +8,7 @@ const createHelpRequest = async (req, res) => {
         const {requesterId, topic, description, urgencyLevel, tags} = req.body;
         let attachmentUrl = null;
         if (req.file) {
-            attachmentUrl = `/uploads/${req.file.filename}`; 
+            attachmentUrl = req.file.path; 
         }
 
         const parsedTags =
@@ -87,23 +87,33 @@ const acceptHelpRequest = async(req, res) => {
         const requestId = req.params.id;
         const helperId = req.user._id;
 
-        const updatedRequest = await HelpRequest.findOneAndUpdate(
-            { _id: requestId, status: 'Open' },
-            { 
-                $set: { 
-                    status: 'In Progress', 
-                    acceptedHelper: helperId 
-                } 
-            },
-            { new: true } 
-        );
+        const request = await HelpRequest.findById(requestId).select('requester status');
 
-        if (!updatedRequest) {
-            return res.status(409).json({ 
-                success: false, 
-                error: "This request has already been accepted or closed." 
+        if (!request) {
+            return res.status(404).json({
+                success: false,
+                error: "Help request not found."
             });
         }
+
+        if (request.requester.toString() === helperId.toString()) {
+            return res.status(403).json({
+                success: false,
+                error: "You cannot offer help on your own request."
+            });
+        }
+
+        if (request.status !== 'Open') {
+            return res.status(409).json({
+                success: false,
+                error: "This request has already been accepted or closed."
+            });
+        }
+
+        request.status = 'In Progress';
+        request.acceptedHelper = helperId;
+        const updatedRequest = await request.save();
+
         res.status(200).json({
             success: true,
             message: "You are now helping with this request!",

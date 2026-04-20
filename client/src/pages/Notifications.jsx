@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import Toast from '../components/Toast';
 import AppHeader from '../components/AppHeader';
-import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
+import Toast from '../components/Toast';
 import { socket } from '../socket';
 
-const API_BASE = 'http://localhost:8000/api/notifications';
+const API_BASE = 'http://localhost:5000/api/notifications';
+
+const TYPE_OPTIONS = [
+  { value: 'all', label: 'All Types' },
+  { value: 'info', label: 'Info' },
+  { value: 'success', label: 'Success' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'error', label: 'Error' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All Status' },
+  { value: 'read', label: 'Read' },
+  { value: 'unread', label: 'Unread' },
+];
 
 const getCurrentUser = () => {
   try {
@@ -38,22 +51,32 @@ const parseApiResponse = async (response) => {
   if (contentType.includes('application/json')) {
     return response.json();
   }
-
   const text = await response.text();
-  return {
-    message: text || 'Server returned a non-JSON response',
-  };
+  return { message: text || 'Server error' };
+};
+
+const sanitizeText = (text) => (typeof text === 'string' ? text.trim() : '');
+
+const getFieldError = (name, value) => {
+  if (!value || !value.trim()) return `${name} is required`;
+  return '';
+};
+
+const formatDateTime = (value) => {
+  if (!value) return 'Unknown time';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+  return date.toLocaleString();
 };
 
 const Notifications = () => {
+  const token = localStorage.getItem('token');
+
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [workingId, setWorkingId] = useState('');
 
   const [toast, setToast] = useState({
     show: false,
@@ -61,14 +84,25 @@ const Notifications = () => {
     message: '',
   });
 
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+
   const [formData, setFormData] = useState({
     title: '',
     message: '',
     type: 'info',
   });
 
+  const [formErrors, setFormErrors] = useState({
+    title: '',
+    message: '',
+    type: '',
+  });
+
   const currentUser = getCurrentUser();
-  const currentUserId = currentUser?._id || currentUser?.id || '';
+  const currentUserId = currentUser?._id || '';
+  const isAdmin = currentUser?.role === 'admin';
 
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
@@ -83,11 +117,8 @@ const Notifications = () => {
       try {
         setLoading(true);
 
-        const token = localStorage.getItem('token');
-
         const response = await fetch(API_BASE, {
           headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         });
@@ -95,35 +126,37 @@ const Notifications = () => {
         const data = await parseApiResponse(response);
 
         if (!response.ok) {
-          throw new Error(data.message || 'Unable to load notifications');
+          throw new Error(data.message || 'Failed to load notifications');
         }
 
         setNotifications(Array.isArray(data) ? data : []);
-      } catch (error) {
-        showToast('error', error.message);
+      } catch (err) {
+        showToast('error', err.message || 'Failed to load notifications');
       } finally {
         setLoading(false);
       }
     };
 
-    loadNotifications();
-  }, []);
+    if (token) {
+      loadNotifications();
+    } else {
+      setLoading(false);
+      showToast('error', 'Please log in again');
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!currentUserId) return;
 
-    const joinUserRoom = () => {
-      socket.emit('join-user-room', currentUserId);
-    };
+    const join = () => socket.emit('join-user-room', currentUserId);
+    join();
+    socket.on('connect', join);
 
-    joinUserRoom();
-    socket.on('connect', joinUserRoom);
-
-    const onNew = (notification) => {
+    const handleNew = (notification) => {
       setNotifications((prev) => [notification, ...prev]);
     };
 
-    const onUpdated = (payload) => {
+    const handleUpdated = (payload) => {
       setNotifications((prev) =>
         prev.map((item) =>
           item._id === payload._id ? { ...item, read: payload.read } : item
@@ -131,34 +164,34 @@ const Notifications = () => {
       );
     };
 
-    const onAllRead = () => {
+    const handleAllRead = () => {
       setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
     };
 
-    const onDeleted = (payload) => {
+    const handleDeleted = (payload) => {
       setNotifications((prev) => prev.filter((item) => item._id !== payload._id));
     };
 
-    socket.on('notification:new', onNew);
-    socket.on('notification:updated', onUpdated);
-    socket.on('notification:all-read', onAllRead);
-    socket.on('notification:deleted', onDeleted);
+    socket.on('notification:new', handleNew);
+    socket.on('notification:updated', handleUpdated);
+    socket.on('notification:all-read', handleAllRead);
+    socket.on('notification:deleted', handleDeleted);
 
     return () => {
-      socket.off('connect', joinUserRoom);
-      socket.off('notification:new', onNew);
-      socket.off('notification:updated', onUpdated);
-      socket.off('notification:all-read', onAllRead);
-      socket.off('notification:deleted', onDeleted);
+      socket.off('connect', join);
+      socket.off('notification:new', handleNew);
+      socket.off('notification:updated', handleUpdated);
+      socket.off('notification:all-read', handleAllRead);
+      socket.off('notification:deleted', handleDeleted);
     };
   }, [currentUserId]);
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter((item) => {
       const matchesSearch =
-        !searchTerm.trim() ||
-        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.message?.toLowerCase().includes(searchTerm.toLowerCase());
+        !search.trim() ||
+        item.title?.toLowerCase().includes(search.toLowerCase()) ||
+        item.message?.toLowerCase().includes(search.toLowerCase());
 
       const matchesType = typeFilter === 'all' || item.type === typeFilter;
 
@@ -169,80 +202,53 @@ const Notifications = () => {
 
       return matchesSearch && matchesType && matchesStatus;
     });
-  }, [notifications, searchTerm, typeFilter, statusFilter]);
+  }, [notifications, search, typeFilter, statusFilter]);
 
-  const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
-  const filteredUnreadCount = useMemo(() => filteredNotifications.filter((item) => !item.read).length, [filteredNotifications]);
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications]
+  );
 
-  const stats = [
-    {
-      title: 'Total Notifications',
-      value: loading ? '...' : notifications.length,
-      subtitle: 'All notification records available in your account.',
-      badge: 'Inbox',
-      cardClass: 'bg-blue-50 ring-1 ring-blue-100',
-      valueClass: 'text-blue-700',
-    },
-    {
-      title: 'Unread Notifications',
-      value: loading ? '...' : unreadCount,
-      subtitle: 'Notifications that still require your attention.',
-      badge: 'Pending',
-      cardClass: 'bg-yellow-50 ring-1 ring-yellow-100',
-      valueClass: 'text-yellow-700',
-    },
-    {
-      title: 'Filtered Results',
-      value: loading ? '...' : filteredNotifications.length,
-      subtitle: `${filteredUnreadCount} unread notifications match the current filters.`,
-      badge: 'Filter',
-      cardClass: 'bg-green-50 ring-1 ring-green-100',
-      valueClass: 'text-green-700',
-    },
-  ];
+  const validateForm = () => {
+    const errors = {
+      title: getFieldError('Title', formData.title),
+      message: getFieldError('Message', formData.message),
+      type: '',
+    };
 
-  const getTypeBadge = (type) => {
-    if (type === 'success') return 'bg-green-50 text-green-700';
-    if (type === 'warning') return 'bg-yellow-50 text-yellow-700';
-    if (type === 'error') return 'bg-red-50 text-red-700';
-    return 'bg-blue-50 text-blue-700';
+    setFormErrors(errors);
+
+    return !errors.title && !errors.message;
   };
 
-  const formatDate = (value) => {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleString();
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleCreateNotification = async (e) => {
+  const handlePublish = async (e) => {
     e.preventDefault();
 
+    if (!validateForm()) {
+      showToast('error', 'Please fill all required fields');
+      return;
+    }
+
     try {
-      setCreating(true);
+      setPublishing(true);
 
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(API_BASE, {
+      const res = await fetch(API_BASE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          title: sanitizeText(formData.title),
+          message: sanitizeText(formData.message),
+          type: formData.type,
+        }),
       });
 
-      const data = await parseApiResponse(response);
+      const data = await parseApiResponse(res);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to create notification');
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to publish notification');
       }
 
       setFormData({
@@ -251,17 +257,23 @@ const Notifications = () => {
         type: 'info',
       });
 
-      showToast('success', 'Notification created successfully');
-    } catch (error) {
-      showToast('error', error.message);
+      setFormErrors({
+        title: '',
+        message: '',
+        type: '',
+      });
+
+      showToast('success', 'Notification published successfully');
+    } catch (err) {
+      showToast('error', err.message || 'Failed to publish notification');
     } finally {
-      setCreating(false);
+      setPublishing(false);
     }
   };
 
-  const handleMarkAsRead = async (id) => {
+  const handleMarkRead = async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      setWorkingId(id);
 
       const response = await fetch(`${API_BASE}/${id}/read`, {
         method: 'PUT',
@@ -273,45 +285,18 @@ const Notifications = () => {
       const data = await parseApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to update notification status');
+        throw new Error(data.message || 'Failed to mark notification as read');
       }
-
-      showToast('success', 'Notification marked as read');
-    } catch (error) {
-      showToast('error', error.message);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      setMarkingAll(true);
-
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`${API_BASE}/read-all`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await parseApiResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to update notifications');
-      }
-
-      showToast('success', 'All notifications have been marked as read');
-    } catch (error) {
-      showToast('error', error.message);
+    } catch (err) {
+      showToast('error', err.message || 'Failed to mark as read');
     } finally {
-      setMarkingAll(false);
+      setWorkingId('');
     }
   };
 
   const handleDelete = async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      setWorkingId(id);
 
       const response = await fetch(`${API_BASE}/${id}`, {
         method: 'DELETE',
@@ -323,208 +308,277 @@ const Notifications = () => {
       const data = await parseApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to delete notification');
+        throw new Error(data.message || 'Failed to delete notification');
       }
 
-      showToast('success', 'Notification deleted successfully');
-    } catch (error) {
-      showToast('error', error.message);
+      setNotifications((prev) => prev.filter((item) => item._id !== id));
+      showToast('success', 'Notification deleted');
+    } catch (err) {
+      showToast('error', err.message || 'Failed to delete notification');
+    } finally {
+      setWorkingId('');
     }
   };
 
-  const handleResetFilters = () => {
-    setSearchTerm('');
-    setTypeFilter('all');
-    setStatusFilter('all');
+  const handleMarkAllRead = async () => {
+    try {
+      setMarkingAll(true);
+
+      const response = await fetch(`${API_BASE}/read-all`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await parseApiResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to mark all as read');
+      }
+
+      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+      showToast('success', 'All notifications marked as read');
+    } catch (err) {
+      showToast('error', err.message || 'Failed to mark all as read');
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const getTypeBadge = (type) => {
+    if (type === 'success') return 'bg-green-100 text-green-700';
+    if (type === 'warning') return 'bg-yellow-100 text-yellow-700';
+    if (type === 'error') return 'bg-red-100 text-red-700';
+    return 'bg-blue-100 text-blue-700';
   };
 
   return (
-    <div className="px-4 py-8 sm:px-6 lg:px-10">
+    <div className="app-shell min-h-screen px-4 py-8 sm:px-6 lg:px-10">
       <Toast show={toast.show} type={toast.type} message={toast.message} onClose={closeToast} />
 
       <div className="mx-auto max-w-7xl space-y-6">
+        <AppHeader
+          title="Notifications"
+          subtitle="Manage announcements, alerts, and notification history from one place."
+        />
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {stats.map((item) => (
-            <StatCard key={item.title} {...item} />
-          ))}
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <PanelCard eyebrow="Create Notification" title="Publish a New Notification">
-            <form onSubmit={handleCreateNotification} className="grid gap-4">
+        {isAdmin ? (
+          <PanelCard eyebrow="Broadcast Center" title="Publish Notification">
+            <form onSubmit={handlePublish} className="grid gap-5">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Notification Title</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Title
+                </label>
                 <input
                   type="text"
-                  name="title"
+                  placeholder="Enter notification title"
                   value={formData.title}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  placeholder="Enter a clear notification title"
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    formErrors.title
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
                 />
+                {formErrors.title ? (
+                  <p className="mt-2 text-xs font-medium text-red-600">{formErrors.title}</p>
+                ) : null}
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Notification Message</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Message
+                </label>
                 <textarea
-                  name="message"
+                  rows="5"
+                  placeholder="Write notification message"
                   value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows="4"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  placeholder="Write the message content to be delivered"
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, message: e.target.value }))
+                  }
+                  className={`w-full rounded-2xl border px-4 py-3 text-slate-800 outline-none transition focus:ring-4 ${
+                    formErrors.message
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100'
+                      : 'border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-100'
+                  }`}
                 />
+                {formErrors.message ? (
+                  <p className="mt-2 text-xs font-medium text-red-600">{formErrors.message}</p>
+                ) : null}
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Notification Type</label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Type
+                </label>
                 <select
-                  name="type"
                   value={formData.type}
-                  onChange={handleChange}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, type: e.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
-                  <option value="info">Information</option>
-                  <option value="success">Success</option>
-                  <option value="warning">Warning</option>
-                  <option value="error">Critical</option>
+                  {TYPE_OPTIONS.filter((item) => item.value !== 'all').map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <button
-                type="submit"
-                disabled={creating}
-                className="rounded-2xl bg-blue-600 px-5 py-3.5 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {creating ? 'Publishing...' : 'Publish Notification'}
-              </button>
-            </form>
-          </PanelCard>
-
-          <PanelCard eyebrow="Notification Records" title="Search and Manage Notifications">
-            <div className="mb-5 grid gap-4 border-b border-slate-200 pb-5 lg:grid-cols-4">
-              <input
-                type="text"
-                placeholder="Search by title or message..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 lg:col-span-2"
-              />
-
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
-              >
-                <option value="all">All Types</option>
-                <option value="info">Information</option>
-                <option value="success">Success</option>
-                <option value="warning">Warning</option>
-                <option value="error">Critical</option>
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-100"
-              >
-                <option value="all">All Statuses</option>
-                <option value="unread">Unread Only</option>
-                <option value="read">Read Only</option>
-              </select>
-            </div>
-
-            <div className="mb-4 flex flex-wrap justify-between gap-3">
-              <div className="flex gap-3">
+              <div className="flex justify-end">
                 <button
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  disabled={markingAll || unreadCount === 0}
-                  className="rounded-2xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  type="submit"
+                  disabled={publishing}
+                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {markingAll ? 'Updating...' : 'Mark All as Read'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Clear Filters
+                  {publishing ? 'Publishing...' : 'Publish Notification'}
                 </button>
               </div>
+            </form>
+          </PanelCard>
+        ) : null}
 
-              <p className="self-center text-sm text-slate-500">
-                {filteredNotifications.length} notification{filteredNotifications.length === 1 ? '' : 's'} found
-              </p>
+        <PanelCard eyebrow="Notification Center" title="Notifications">
+          <div className="mb-6 grid gap-4 lg:grid-cols-[1.5fr_1fr_1fr_auto]">
+            <input
+              type="text"
+              placeholder="Search notifications"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            />
+
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            >
+              {TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleMarkAllRead}
+              disabled={markingAll || unreadCount === 0}
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {markingAll ? 'Marking...' : 'Mark All Read'}
+            </button>
+          </div>
+
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
+              Total: {notifications.length}
+            </span>
+            <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700">
+              Unread: {unreadCount}
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
+              Showing: {filteredNotifications.length}
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-slate-500">
+              Loading notifications...
             </div>
-
+          ) : filteredNotifications.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-slate-500">
+              No notifications found for the selected filters.
+            </div>
+          ) : (
             <div className="grid gap-4">
-              {loading ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                  Loading notifications...
-                </div>
-              ) : filteredNotifications.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-slate-500">
-                  No notifications match the current search and filter criteria.
-                </div>
-              ) : (
-                filteredNotifications.map((item) => (
-                  <div
-                    key={item._id}
-                    className={`rounded-2xl border p-4 shadow-sm ${
-                      item.read ? 'border-slate-200 bg-slate-50' : 'border-blue-200 bg-blue-50/50'
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="max-w-3xl">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getTypeBadge(item.type)}`}>
-                            {item.type}
-                          </span>
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              item.read ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-700'
-                            }`}
-                          >
-                            {item.read ? 'Read' : 'Unread'}
-                          </span>
-                        </div>
+              {filteredNotifications.map((item) => (
+                <div
+                  key={item._id}
+                  className={`rounded-2xl border p-5 shadow-sm transition ${
+                    item.read
+                      ? 'border-slate-200 bg-white'
+                      : 'border-blue-200 bg-blue-50/40'
+                  }`}
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getTypeBadge(
+                            item.type
+                          )}`}
+                        >
+                          {item.type || 'info'}
+                        </span>
 
-                        <h3 className="mt-3 text-lg font-bold text-slate-900">{item.title}</h3>
-                        <p className="mt-2 text-sm leading-7 text-slate-600">{item.message}</p>
-                        <p className="mt-3 text-xs text-slate-500">Issued: {formatDate(item.createdAt)}</p>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            item.read
+                              ? 'bg-slate-100 text-slate-600'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {item.read ? 'Read' : 'Unread'}
+                        </span>
                       </div>
 
-                      <div className="flex gap-2">
-                        {!item.read && (
-                          <button
-                            type="button"
-                            onClick={() => handleMarkAsRead(item._id)}
-                            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                          >
-                            Mark as Read
-                          </button>
-                        )}
+                      <h3 className="text-lg font-bold text-slate-900">
+                        {item.title || 'Untitled notification'}
+                      </h3>
 
+                      <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-600">
+                        {item.message || '-'}
+                      </p>
+
+                      <p className="mt-3 text-xs text-slate-500">
+                        {formatDateTime(item.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!item.read ? (
                         <button
                           type="button"
-                          onClick={() => handleDelete(item._id)}
-                          className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+                          onClick={() => handleMarkRead(item._id)}
+                          disabled={workingId === item._id}
+                          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Delete
+                          {workingId === item._id ? 'Working...' : 'Mark Read'}
                         </button>
-                      </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item._id)}
+                        disabled={workingId === item._id}
+                        className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {workingId === item._id ? 'Working...' : 'Delete'}
+                      </button>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
-          </PanelCard>
-        </div>
+          )}
+        </PanelCard>
       </div>
     </div>
   );

@@ -20,13 +20,13 @@ const MyInvitations = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const invRes = await fetch(
-        "http://localhost:8000/api/request/invitations",
+        "http://localhost:5000/api/request/invitations",
         { headers },
       );
       const invData = await invRes.json();
 
       const taskRes = await fetch(
-        "http://localhost:8000/api/request/my-tasks",
+        "http://localhost:5000/api/request/my-tasks",
         { headers },
       );
       const taskData = await taskRes.json();
@@ -49,7 +49,7 @@ const MyInvitations = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:8000/api/request/${requestId}/accept`,
+        `http://localhost:5000/api/request/${requestId}/accept`,
         { method: "PUT", headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await response.json();
@@ -84,16 +84,12 @@ const MyInvitations = () => {
     }
   };
 
-  const getUrgencyBorder = (level) => {
-    switch (level) {
-      case "Low":
-        return "bg-green-500";
-      case "Medium":
-        return "bg-yellow-500";
-      case "Critical":
-        return "bg-red-500";
-      default:
-        return "bg-gray-300";
+  const getAccentBar = (status) => {
+    switch (status) {
+      case 'Open':        return 'bg-amber-400';
+      case 'In Progress': return 'bg-indigo-500';
+      case 'Resolved':    return 'bg-green-500';
+      default:            return 'bg-slate-300';
     }
   };
 
@@ -116,7 +112,7 @@ const MyInvitations = () => {
   return (
     <div className="max-w-5xl mx-auto px-6 py-7">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-sans font-bold mb-8 text-gray-800">
+        <h1 className="text-3xl font-semibold text-gray-800">
           My Invitations & Tasks
           <p className="mt-1 text-sm text-slate-500">
             Manage your pending invitations and active helping tasks.
@@ -189,9 +185,7 @@ const MyInvitations = () => {
                 key={inv._id}
                 className="bg-white rounded-xl border border-slate-200 overflow-hidden flex items-stretch hover:shadow-sm transition-shadow"
               >
-                <div
-                  className={`w-1 flex-shrink-0 bg-blue-600`}
-                />
+                <div className={`w-1 flex-shrink-0 ${getAccentBar(inv.status)}`} />
 
                 <div className="flex flex-1 items-center gap-4 px-5 py-4">
                   <div className="flex-1 min-w-0">
@@ -267,6 +261,7 @@ const MyInvitations = () => {
                 key={task._id}
                 className="bg-white rounded-xl border border-slate-200 overflow-hidden flex items-stretch hover:shadow-sm transition-shadow"
               >
+                
                 <div
                   className={`w-1 flex-shrink-0 bg-blue-600`}
                 />
@@ -305,7 +300,7 @@ const MyInvitations = () => {
 
                   <button
                     onClick={() => navigate(`/chat/${task._id}`)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all active:scale-95 flex-shrink-0"
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-all active:scale-95 flex-shrink-0"
                   >
                     <svg
                       width="12"

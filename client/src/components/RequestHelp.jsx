@@ -40,6 +40,9 @@ const RequestHelp = () => {
     if (formData.topic.trim().length < 15) {
       errors.topic = "Topic must be at least 15 characters long.";
     }
+    else if (/^\d+$/.test(formData.topic)) {
+      errors.topic = "Topic cannot be just numbers. Please provide a descriptive title.";
+    }
 
     if (formData.description.trim().length > 250) {
       errors.description = "Please detail (max 250 characters). Include what you've tried!";
@@ -114,7 +117,7 @@ if (formData.tags.trim().endsWith(',')) {
 
   
     try {
-      const response = await fetch("http://localhost:8000/api/request", {
+      const response = await fetch("http://localhost:5000/api/request", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
