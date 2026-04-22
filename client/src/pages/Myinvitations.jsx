@@ -20,13 +20,13 @@ const MyInvitations = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const invRes = await fetch(
-        "http://localhost:5000/api/request/invitations",
+        "http://localhost:8000/api/request/invitations",
         { headers },
       );
       const invData = await invRes.json();
 
       const taskRes = await fetch(
-        "http://localhost:5000/api/request/my-tasks",
+        "http://localhost:8000/api/request/my-tasks",
         { headers },
       );
       const taskData = await taskRes.json();
@@ -49,7 +49,7 @@ const MyInvitations = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:5000/api/request/${requestId}/accept`,
+        `http://localhost:8000/api/request/${requestId}/accept`,
         { method: "PUT", headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await response.json();

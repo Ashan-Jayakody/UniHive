@@ -15,7 +15,7 @@ const MyRequests = () => {
   const fetchMyRequests = async () => {
     try {
       const token    = typeof window !== "undefined" ? localStorage.getItem('token') : null;
-      const response = await fetch('http://localhost:5000/api/request/myrequests', {
+      const response = await fetch('http://localhost:8000/api/request/myrequests', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
