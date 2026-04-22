@@ -36,6 +36,8 @@ const PeerTutoring = () => {
   const [showForm, setShowForm] = useState(false);
   const [approvedSessions, setApprovedSessions] = useState([]);
   const [mySessions, setMySessions] = useState([]);
+  const [createdSessions, setCreatedSessions] = useState([]);
+  const [joinedSessions, setJoinedSessions] = useState([]);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [adminSessions, setAdminSessions] = useState([]);
@@ -121,7 +123,10 @@ const PeerTutoring = () => {
       });
       const data = await response.json();
       if (response.ok) {
-        setMySessions(data.sessions || []);
+        const allSessions = data.sessions || [];
+        setMySessions(allSessions);
+        setCreatedSessions(allSessions.filter(s => (s.creator?._id || s.creator) === user?._id));
+        setJoinedSessions(allSessions.filter(s => (s.creator?._id || s.creator) !== user?._id));
       }
     } catch (error) {
       console.error("Failed to load your sessions", error);
@@ -192,6 +197,24 @@ const PeerTutoring = () => {
       }
     } catch (error) {
       console.error("Join session failed", error);
+    }
+  };
+
+  const handleJoinLiveSession = async (sessionId, link) => {
+    try {
+      // Notify creator of attendance
+      await fetch(`${API_BASE}/${sessionId}/notify-attendance`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+      });
+      // Open link
+      window.open(link, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error("Attendance notification failed", error);
+      // Still open link even if notification fails
+      window.open(link, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -301,7 +324,13 @@ const PeerTutoring = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    if (submitted && name === "date") {
+    // Freeze date if submitted or editing
+    if ((submitted || isEditing) && name === "date") {
+      return;
+    }
+
+    // Prevent negative students in field
+    if (name === "maxStudents" && value !== "" && Number(value) < 1) {
       return;
     }
 
@@ -627,7 +656,7 @@ const PeerTutoring = () => {
         ) : (
           <>
             {showForm ? (
-              <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="space-y-6">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-6 flex items-start justify-between gap-4">
                     <div>
@@ -702,7 +731,7 @@ const PeerTutoring = () => {
                           min={todayDateString()}
                           value={formData.date}
                           onChange={handleChange}
-                          disabled={submitted}
+                          disabled={submitted || isEditing}
                           className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
                         />
                         {errors.date && (
@@ -844,42 +873,6 @@ const PeerTutoring = () => {
                   )}
                 </section>
 
-                <aside className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-                  <div className="mb-5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                      Session rules
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold text-slate-900">
-                      Validation checks
-                    </h2>
-                  </div>
-
-                  <ul className="space-y-3 text-sm leading-6 text-slate-600">
-                    <li className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <strong className="font-semibold text-slate-900">Date</strong>{" "}
-                      cannot be in the past and will be locked after submission.
-                    </li>
-                    <li className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <strong className="font-semibold text-slate-900">
-                        Session link
-                      </strong>{" "}
-                      must start with <span className="font-mono">http://</span> or{" "}
-                      <span className="font-mono">https://</span>.
-                    </li>
-                    <li className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <strong className="font-semibold text-slate-900">
-                        Maximum students
-                      </strong>{" "}
-                      must be a positive whole number greater than zero.
-                    </li>
-                    <li className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <strong className="font-semibold text-slate-900">
-                        End time
-                      </strong>{" "}
-                      must be later than the start time.
-                    </li>
-                  </ul>
-                </aside>
               </div>
             ) : (
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -892,23 +885,22 @@ const PeerTutoring = () => {
             <section className="space-y-4">
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-slate-900">
-                  My tutoring sessions
+                  Tutoring sessions I'm leading
                 </h2>
                 <p className="mt-2 text-sm text-slate-500">
-                  Manage your submitted sessions and update or delete them before
-                  final approval.
+                  Manage sessions you've created. Update or delete them here.
                 </p>
               </div>
 
-              {mySessions.length === 0 ? (
+              {createdSessions.length === 0 ? (
                 <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <p className="text-sm text-slate-600">
-                    You have not created any tutoring sessions yet.
+                    You haven't created any tutoring sessions yet.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {mySessions.map((session) => (
+                  {createdSessions.map((session) => (
                     <div
                       key={session._id}
                       className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
@@ -945,7 +937,15 @@ const PeerTutoring = () => {
                               <span className="block text-xs uppercase tracking-wide text-slate-400">
                                 Status
                               </span>
-                              <span className="font-medium text-slate-900">
+                              <span
+                                className={`font-medium ${
+                                  session.approvalStatus === "approved"
+                                    ? "text-emerald-600"
+                                    : session.approvalStatus === "rejected"
+                                    ? "text-rose-600"
+                                    : "text-amber-600"
+                                }`}
+                              >
                                 {session.approvalStatus}
                               </span>
                             </div>
@@ -960,42 +960,8 @@ const PeerTutoring = () => {
                             </div>
                           </div>
 
-                          {session.feedbacks?.length > 0 && (
-                            <div className="mt-6">
-                              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                                Recent Feedback ({session.feedbacks.length})
-                              </p>
-                              <div className="mt-3 grid gap-3">
-                                {session.feedbacks.slice(-3).map((fb, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-                                  >
-                                    <div className="flex items-center gap-1 text-amber-500">
-                                      {Array.from({ length: 5 }).map((_, i) => (
-                                        <span
-                                          key={i}
-                                          className={
-                                            i < fb.rating
-                                              ? "text-amber-500"
-                                              : "text-slate-200"
-                                          }
-                                        >
-                                          ★
-                                        </span>
-                                      ))}
-                                    </div>
-                                    <p className="mt-1 text-sm italic text-slate-600">
-                                      "{fb.comment}"
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
                           {session.rejectionReason && (
-                            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                            <p className="mt-3 text-xs text-rose-600 italic">
                               Rejection reason: {session.rejectionReason}
                             </p>
                           )}
@@ -1039,21 +1005,127 @@ const PeerTutoring = () => {
                             Participants info
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleEditSession(session)}
-                            className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                          >
-                            Edit
-                          </button>
+                          {getSessionStatus(session.date, session.time, session.endTime) !== "completed" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleEditSession(session)}
+                                className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                              >
+                                Edit
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSession(session._id)}
-                            className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700"
-                          >
-                            Delete
-                          </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSession(session._id)}
+                                className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-500">
+                              Session Completed
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="mt-8 space-y-4">
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Sessions I'm attending
+                </h2>
+                <p className="mt-2 text-sm text-slate-500">
+                  Sessions you've joined as a student.
+                </p>
+              </div>
+
+              {joinedSessions.length === 0 ? (
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <p className="text-sm text-slate-600">
+                    You haven't joined any tutoring sessions yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {joinedSessions.map((session) => (
+                    <div
+                      key={session._id}
+                      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <h3 className="text-xl font-semibold text-slate-900">
+                            {session.moduleName}
+                          </h3>
+                          <div className="mt-4 flex gap-4">
+                            <span className="text-sm text-slate-500">
+                              Tutor: {session.creator?.name || "Tutor"}
+                            </span>
+                            <span className="text-sm text-slate-500 font-medium">
+                              {new Date(session.date).toLocaleDateString()} at {session.time}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:w-72">
+                          {(() => {
+                            const status = getSessionStatus(session.date, session.time, session.endTime);
+                            const alreadyHasFeedback = session.feedbacks?.some(
+                              (fb) => (fb.user?._id || fb.user) === user?._id
+                            );
+
+                            if (status === "completed") {
+                              if (alreadyHasFeedback) {
+                                return (
+                                  <button disabled className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-400">
+                                    Feedback submitted
+                                  </button>
+                                );
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveFeedbackSessionId(session._id);
+                                    setFeedbackFormData({ rating: 5, comment: "" });
+                                  }}
+                                  className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                                >
+                                  Give feedback
+                                </button>
+                              );
+                            }
+
+                            return (
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    disabled
+                                    className="rounded-2xl bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-400"
+                                  >
+                                    Already Joined
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={status === "upcoming"}
+                                    onClick={() => handleJoinLiveSession(session._id, session.sessionLink)}
+                                    className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+                                      status === "active"
+                                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    }`}
+                                  >
+                                    Join session
+                                  </button>
+                                </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1222,20 +1294,15 @@ const PeerTutoring = () => {
                               (fb) => (fb.user?._id || fb.user) === user?._id
                             );
 
-                            if (status === "completed") {
-                              if (isJoined) {
-                                if (alreadyHasFeedback) {
-                                  return (
-                                    <button
-                                      disabled
-                                      className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-400"
-                                    >
-                                      Feedback submitted
-                                    </button>
-                                  );
-                                }
+                            const isFeedbackAllowed = (() => {
+                              if (status === "completed") return true;
+                              if (status !== "active") return false;
+                              return true; // Available as soon as it starts
+                            })();
 
-                                return (
+                            if (isJoined && isFeedbackAllowed && !alreadyHasFeedback) {
+                              return (
+                                <div className="flex flex-col gap-2">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1250,9 +1317,28 @@ const PeerTutoring = () => {
                                   >
                                     Give feedback
                                   </button>
-                                );
-                              }
+                                  {activeFeedbackSessionId === session._id && (
+                                    <div className="mt-2 text-xs text-indigo-500 italic">
+                                      Scroll up to fill feedback form
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
 
+                            if (status === "completed") {
+                              if (isJoined) {
+                                if (alreadyHasFeedback) {
+                                  return (
+                                    <button
+                                      disabled
+                                      className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-400"
+                                    >
+                                      Feedback submitted
+                                    </button>
+                                  );
+                                }
+                              }
                               return (
                                 <button
                                   disabled
@@ -1263,27 +1349,38 @@ const PeerTutoring = () => {
                               );
                             }
 
+                            if (isJoined) {
+                              return (
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    disabled
+                                    className="rounded-2xl bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-400"
+                                  >
+                                    Already Joined
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={status === "upcoming"}
+                                    onClick={() => handleJoinLiveSession(session._id, session.sessionLink)}
+                                    className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+                                      status === "active"
+                                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    }`}
+                                  >
+                                    {status === "upcoming" ? "Join session" : "Join session"}
+                                  </button>
+                                </div>
+                              );
+                            }
+
                             return (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (isJoined) {
-                                    window.open(
-                                      session.sessionLink,
-                                      "_blank",
-                                      "noopener,noreferrer"
-                                    );
-                                  } else {
-                                    handleJoinSession(session._id);
-                                  }
-                                }}
-                                className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition ${
-                                  isJoined
-                                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                    : "border border-indigo-600 bg-white text-indigo-700 hover:bg-indigo-50"
-                                }`}
+                                onClick={() => handleJoinSession(session._id)}
+                                className="rounded-2xl border border-indigo-600 bg-white px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
                               >
-                                {isJoined ? "Join session" : "Join session"}
+                                Join now
                               </button>
                             );
                           })()}
@@ -1318,24 +1415,68 @@ const PeerTutoring = () => {
               </div>
             </div>
 
-            <div className="space-y-3 px-6 py-5">
-              {activeParticipantSession.participants?.length ? (
-                activeParticipantSession.participants.map((participant) => (
-                  <div
-                    key={participant._id || participant}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                  >
-                    <p className="font-medium text-slate-900">
-                      {participant.name || participant}
-                    </p>
-                    {participant.email && (
-                      <p className="text-sm text-slate-500">{participant.email}</p>
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
+                Registered students ({activeParticipantSession.participants?.length || 0})
+              </h4>
+              <div className="space-y-3">
+                {activeParticipantSession.participants?.length ? (
+                  activeParticipantSession.participants.map((participant) => (
+                    <div
+                      key={participant._id || participant}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                    >
+                      <p className="font-medium text-slate-900">
+                        {participant.name || participant}
+                      </p>
+                      {participant.email && (
+                        <p className="text-sm text-slate-500">{participant.email}</p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
+                    No users have joined this session yet.
+                  </div>
+                )}
+              </div>
+
+              {(activeParticipantSession.creator?._id || activeParticipantSession.creator) === user?._id && (
+                <div className="mt-8">
+                  <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
+                    Student Feedback ({activeParticipantSession.feedbacks?.length || 0})
+                  </h4>
+                  <div className="space-y-4">
+                    {activeParticipantSession.feedbacks?.length ? (
+                      activeParticipantSession.feedbacks.map((fb, idx) => (
+                        <div
+                          key={fb._id || idx}
+                          className="rounded-2xl border border-indigo-100 bg-indigo-50/30 p-4"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {fb.user?.name || "Anonymous student"}
+                            </p>
+                            <div className="flex text-amber-500">
+                              {[...Array(5)].map((_, i) => (
+                                <span key={i}>{i < fb.rating ? "★" : "☆"}</span>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-600 italic">
+                            "{fb.comment}"
+                          </p>
+                          <p className="mt-2 text-[10px] text-slate-400">
+                            Submitted on {new Date(fb.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 italic">
+                        No feedback received yet.
+                      </div>
                     )}
                   </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
-                  No users have joined this session yet.
                 </div>
               )}
             </div>
