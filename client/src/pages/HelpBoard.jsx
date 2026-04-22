@@ -39,7 +39,7 @@ const HelpBoard = () => {
         throw new Error("You must be logged in to view the board.");
       }
 
-      const response = await fetch("http://localhost:8000/api/request", {
+      const response = await fetch("http://localhost:5000/api/request", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -71,7 +71,7 @@ const HelpBoard = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:8000/api/request/${requestId}/accept`,
+        `http://localhost:5000/api/request/${requestId}/accept`,
         {
           method: "PUT",
           headers: {
