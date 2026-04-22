@@ -5,7 +5,7 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const DEFAULT_API_ORIGIN = 'http://localhost:5000';
+const DEFAULT_API_ORIGIN = 'http://localhost:8000';
 
 const buildAdminAnalyticsUrl = () => {
   const rawBase = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_ORIGIN).trim();

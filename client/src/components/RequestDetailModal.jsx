@@ -149,14 +149,14 @@ const RequestDetailModal = ({ request, onClose, onOfferHelp, onAccept, showOffer
               </p>
               {request.attachmentUrl.match(/\.(jpeg|jpg|png|gif)(\?.*)?$/i) ? (
                 <img
-                  src={request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:5000${request.attachmentUrl}`}
+                  src={request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:8000${request.attachmentUrl}`}
                   alt="Attachment"
                   className="max-h-40 rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:5000${request.attachmentUrl}`, '_blank')}
+                  onClick={() => window.open(request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:8000${request.attachmentUrl}`, '_blank')}
                 />
               ) : (
                 <a
-                  href={request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:5000${request.attachmentUrl}`}
+                  href={request.attachmentUrl.startsWith('http') ? request.attachmentUrl : `http://localhost:8000${request.attachmentUrl}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-xs font-medium text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 hover:text-indigo-800"
