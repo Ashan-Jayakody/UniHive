@@ -23,6 +23,7 @@ import ResendVerification from "./pages/ResendVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ResourceShare from "./pages/ResourceShare";
 import ResourceAnalytics from "./pages/ResourceAnalytics";
+import PeerTutoring from "./pages/PeerTutoring";
 
 const AppLayout = () => (
   <div className="min-h-screen bg-slate-50 ">
@@ -163,6 +164,14 @@ function App() {
             </ProtectedRoute>
   }
 />
+          <Route
+            path="/peerTutoring"
+            element={
+              <ProtectedRoute>
+                <PeerTutoring />
+              </ProtectedRoute>
+            }
+          />
 
         </Route>
       </Routes>
