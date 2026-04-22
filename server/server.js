@@ -13,6 +13,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const helpRequestRoutes = require('./routes/helpRequestRoutes');
+const peerTutoringRoutes = require('./routes/peerTutoringRoutes');
 
 const { initSocket } = require('./socket');
 
@@ -94,7 +95,9 @@ app.use('/api/threads', threadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin-analytics', adminAnalyticsRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/resource-analytics', require('./routes/adminAnalyticsRoutes')); // Note: Check if this was intended
 app.use('/api/request', helpRequestRoutes);
+app.use('/api/peer-tutoring', peerTutoringRoutes);
 
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
   res.status(204).end();

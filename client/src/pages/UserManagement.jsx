@@ -6,7 +6,7 @@ import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
 import PanelCard from '../components/PanelCard';
 
-const API_BASE = 'http://localhost:5000/api/users';
+const API_BASE = 'http://localhost:8000/api/users';
 
 const capitalizeName = (value) => {
   if (typeof value !== 'string') return '';
