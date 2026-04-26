@@ -27,6 +27,23 @@ UniHive is a centralized, student-centric digital ecosystem designed to streamli
 
 ---
 
+##  Installation & Setup
+
+#### Clone the ropository 
+`https://github.com/Ashan-Jayakody/UniHive.git`
+
+### Backend  
+1. Run `cd server`
+2. Run `npm install`.
+3. Configure environment variables
+4. Run `npm start`
+
+
+### Frontend (React/Vite)
+1. Run `cd client` 
+2. Run `npm install`
+3. Run `npm run dev`.
+   
 ## 📂 Project Structure
 
 ```text
